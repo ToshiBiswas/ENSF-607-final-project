@@ -1,28 +1,24 @@
 {
-  "name": "backend",
+  "name": "instock_with_dbs-backend",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "build": "tsc --project tsconfig.json",
-    "prestart": "npm run build",
-    "start": "node dist/index.js",
-    "dev": "node --watch --loader ts-node/esm src/index.ts"
+    "db:migrate": "knex migrate:latest",
+    "migrate:down": "npx knex migrate:down",
+    "migrate:rollback": "npx knex migrate:rollback",
+    "db:seed": "knex seed:run",
+    "dev": "node --watch index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
-  "devDependencies": {
-    "@types/express": "^5.0.3",
-    "@types/node": "^24.6.2",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
-  },
   "dependencies": {
-    "dotenv": "^17.2.3",
-    "express": "^5.1.0",
-    "mysql2": "^3.15.1",
-    "sequelize": "^6.37.7"
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "knex": "^3.0.1",
+    "mysql2": "^3.6.1"
   }
 }
