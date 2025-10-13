@@ -1,23 +1,31 @@
-import dotenv from 'dotenv';
+require('dotenv').config();
 
-dotenv.config();
+const base = {
+  client: process.env.DB_CLIENT || 'mysql2',
+  pool: { min: 0, max: 10 },
+  migrations: { directory: './migrations', tableName: 'knex_migrations' },
+  seeds: { directory: './seeds' }
+};
 
-export default {
+module.exports = {
   development: {
-    client: 'mysql2',
+    ...base,
+    connection: {
+      host: process.env.DB_HOST || 'db',
+      port: Number(process.env.DB_PORT || 3306),
+      database: process.env.DB_NAME || 'nicetrips',
+      user: process.env.DB_USER || 'nicetrips',
+      password: process.env.DB_PASS || 'secret'
+    }
+  },
+  production: {
+    ...base,
     connection: {
       host: process.env.DB_HOST,
-      port: process.env.DB_PORT,
+      port: Number(process.env.DB_PORT || 3306),
+      database: process.env.DB_NAME,
       user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME
-    },
-    migrations: {
-      tableName: 'knex_migrations',
-      directory: './migrations'
-    },
-    seeds: {
-      directory: './seeds'
+      password: process.env.DB_PASS
     }
   }
 };
