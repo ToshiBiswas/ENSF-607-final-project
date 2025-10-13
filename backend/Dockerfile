@@ -9,7 +9,7 @@ RUN npm ci
 # Copy source
 COPY . .
 
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 EXPOSE 3000
 
 # Start the server (CommonJS)
