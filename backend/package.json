@@ -1,21 +1,22 @@
 {
-  "name": "docker-mysql-backend",
+  "name": "ensf607-backend-js",
   "version": "1.0.0",
   "type": "commonjs",
   "main": "src/server.js",
   "scripts": {
-    "dev": "node src/server.js",
+    "dev": "node -r dotenv/config src/server.js",
+    "start": "node -r dotenv/config src/server.js",
     "migrate": "knex migrate:latest",
     "rollback": "knex migrate:rollback",
     "seed": "knex seed:run"
   },
   "dependencies": {
-    "bcrypt": "^6.0.0",
+    "bcrypt": "^5.1.1",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "knex": "^3.1.0",
     "mysql2": "^3.11.3",
-    "zod": "^4.1.12"
+    "zod": "^3.23.8"
   }
 }
