@@ -20,6 +20,7 @@ services:
       MYSQL_USER: ${DB_USER:-mindplanner}
       MYSQL_PASSWORD: ${DB_PASS:-secret}
       MYSQL_ROOT_PASSWORD: ${DB_PASS:-secret}
+
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${DB_PASS:-secret}"]
       interval: 5s
