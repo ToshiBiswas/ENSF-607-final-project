@@ -1,23 +1,23 @@
 {
-  "name": "my-backend-api",
+  "name": "ensf607-backend-js",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "type": "module",
+  "type": "commonjs",
+  "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "db:seed": "knex seed:run"
+    "dev": "node -r dotenv/config src/server.js",
+    "start": "node -r dotenv/config src/server.js",
+    "rollback": "knex migrate:rollback",
+    "migrate": "knex migrate:latest --env development",
+    "seed": "knex seed:run --env development"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "cors": "^2.8.5",
-    "csv-parser": "^3.2.0",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
+    "bcrypt": "^5.1.1",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
     "knex": "^3.1.0",
-    "mysql2": "^3.15.2",
-    "stockfish": "^11.0.0"
+    "mysql2": "^3.11.3",
+    "zod": "^3.23.8"
   }
 }
