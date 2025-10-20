@@ -1,0 +1,12 @@
+services:
+  payment-mock:
+    build: .
+    image: payment-mock-ts:latest
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+    # Persist seed data (accounts, ledger, idempotency)
+    volumes:
+      - ./seed:/app/dist/seed
+    restart: unless-stopped

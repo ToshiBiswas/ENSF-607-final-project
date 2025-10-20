@@ -1,15 +1,17 @@
 /** @param {import('knex').Knex} knex */
 exports.seed = async (knex) => {
+  // helper to fetch a category_id by label
   const catId = async (label) =>
     (await knex('categoriesid').where({ category_value: label }).first()).category_id;
 
+  // Users
   const users = await knex('users').select('user_id', 'name');
   const admin = users.find(u => u.name === 'Admin').user_id;
   const ava   = users.find(u => u.name === 'Ava Patel').user_id;
   const liam  = users.find(u => u.name === 'Liam Chen').user_id;
   const sofia = users.find(u => u.name === 'Sofia Garcia').user_id;
 
-  // EVENTS (fixed date math)
+  // EVENTS (MySQL-safe date math)
   const [hackathonId] = await knex('events').insert({
     organizer_id: admin,
     title: 'Calgary AI Mini-Hack',
@@ -40,7 +42,7 @@ exports.seed = async (knex) => {
     ticket_type: 'general'
   });
 
-  // EVENT ↔ CATEGORIES
+  // EVENT ↔ CATEGORIES (still many-to-many for events)
   await knex('eventscategories').insert([
     { event_id: hackathonId, category_id: await catId('Technology') },
     { event_id: parkFestId,  category_id: await catId('Music') },
@@ -48,31 +50,25 @@ exports.seed = async (knex) => {
     { event_id: wellnessId,  category_id: await catId('Wellness') }
   ]);
 
-  // USER PREFERENCES
-  const [prefAva]  = await knex('userpreferences').insert({ user_id: ava,  location: 'Downtown Calgary' });
-  const [prefLiam] = await knex('userpreferences').insert({ user_id: liam, location: 'Beltline' });
-  const [prefSofia]= await knex('userpreferences').insert({ user_id: sofia, location: 'Kensington' });
-
-  // PREF ↔ CATEGORIES
-  await knex('preferencecategories').insert([
-    { preference_id: prefAva,  category_id: await catId('Technology') },
-    { preference_id: prefLiam, category_id: await catId('Music') },
-    { preference_id: prefSofia,category_id: await catId('Wellness') }
+  // USER PREFERENCES (one category per user via category_id on userpreferences)
+  await knex('userpreferences').insert([
+    {
+      user_id: ava,
+      location: 'Downtown Calgary',
+      category_id: await catId('Technology')
+    },
+    {
+      user_id: liam,
+      location: 'Beltline',
+      category_id: await catId('Music')
+    },
+    {
+      user_id: sofia,
+      location: 'Kensington',
+      category_id: await catId('Wellness')
+    }
   ]);
 
-  // TICKETS
-  const [t1] = await knex('tickets').insert({
-    event_id: hackathonId, user_id: ava, ticket_type: 'general', price: 25.00,
-    purchase_date: knex.raw('NOW() + INTERVAL 1 DAY')
-  });
-  const [t2] = await knex('tickets').insert({
-    event_id: parkFestId, user_id: liam, ticket_type: 'vip', price: 99.00,
-    purchase_date: knex.raw('NOW() + INTERVAL 2 DAY')
-  });
-  const [t3] = await knex('tickets').insert({
-    event_id: wellnessId, user_id: sofia, ticket_type: 'general', price: 15.00,
-    purchase_date: knex.raw('NOW() + INTERVAL 1 DAY')
-  });
 
   // PAYMENTS
   await knex('payments').insert([

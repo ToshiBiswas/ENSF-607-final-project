@@ -15,7 +15,7 @@ async function registerService({ Username, Email_Address, password, Role = 'user
     username: user.name,
     role: user.role
   });
-
+ 
   return { status: 201, data: User.toDTO(user), token, message: 'register sucessful' };
 }
 

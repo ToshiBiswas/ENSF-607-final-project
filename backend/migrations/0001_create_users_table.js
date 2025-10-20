@@ -64,13 +64,20 @@ exports.up = async (knex) => {
     t.index(['user_id'], 'idx_notifications_user');
   });
 
-  // USER PREFERENCES (no free-text category)
+  // USER PREFERENCES (1 row per user; single category via FK)
   await knex.schema.createTable('userpreferences', (t) => {
     t.increments('preference_id').primary();
     t.integer('user_id').unsigned().notNullable()
-      .references('user_id').inTable('users').onDelete('CASCADE');
+      .references('user_id').inTable('users').onDelete('CASCADE').onUpdate('CASCADE');
     t.string('location', 160).nullable();
-    t.unique(['user_id'], 'uq_userpreferences_user'); // one preference row per user
+
+    // NEW: single category per preference
+    t.integer('category_id').unsigned().nullable()
+      .references('category_id').inTable('categoriesid') // table defined below
+      .onDelete('SET NULL').onUpdate('CASCADE');
+
+    t.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
+    t.unique(['user_id'], 'uq_userpreferences_user'); // enforce 1:1 with users
   });
 
   // CATEGORIES DICTIONARY
@@ -79,7 +86,7 @@ exports.up = async (knex) => {
     t.string('category_value', 100).notNullable().unique();
   });
 
-  // EVENTS ↔ CATEGORIES
+  // EVENTS ↔ CATEGORIES (keep many-to-many for events)
   await knex.schema.createTable('eventscategories', (t) => {
     t.integer('event_id').unsigned().notNullable()
       .references('event_id').inTable('events').onDelete('CASCADE');
@@ -89,20 +96,13 @@ exports.up = async (knex) => {
     t.index(['category_id'], 'idx_eventscategories_category');
   });
 
-  // PREFERENCES ↔ CATEGORIES
-  await knex.schema.createTable('preferencecategories', (t) => {
-    t.integer('preference_id').unsigned().notNullable()
-      .references('preference_id').inTable('userpreferences').onDelete('CASCADE');
-    t.integer('category_id').unsigned().notNullable()
-      .references('category_id').inTable('categoriesid').onDelete('CASCADE');
-    t.primary(['preference_id', 'category_id']);
-    t.index(['category_id'], 'idx_preferencecategories_category');
-  });
+  // REMOVED: preferencecategories (no longer needed since each user has ONE category)
+  // (intentionally omitted)
 };
 
 /** @param {import('knex').Knex} knex */
 exports.down = async (knex) => {
-  await knex.schema.dropTableIfExists('preferencecategories');
+  // Drop in reverse order of FKs
   await knex.schema.dropTableIfExists('eventscategories');
   await knex.schema.dropTableIfExists('categoriesid');
   await knex.schema.dropTableIfExists('userpreferences');

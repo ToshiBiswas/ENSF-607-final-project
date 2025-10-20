@@ -1,0 +1,262 @@
+[
+  {
+    "id": "acct_1000",
+    "firstName": "Alex",
+    "lastName": "Smith",
+    "card": {
+      "number": "4429873876049417",
+      "ccv": "127",
+      "expMonth": 11,
+      "expYear": 2026
+    },
+    "currency": "EUR",
+    "balance": 46802
+  },
+  {
+    "id": "acct_1001",
+    "firstName": "Sam",
+    "lastName": "Johnson",
+    "card": {
+      "number": "4423009950102238",
+      "ccv": "730",
+      "expMonth": 8,
+      "expYear": 2029
+    },
+    "currency": "USD",
+    "balance": 5278
+  },
+  {
+    "id": "acct_1002",
+    "firstName": "Jordan",
+    "lastName": "Brown",
+    "card": {
+      "number": "5299556521180661",
+      "ccv": "727",
+      "expMonth": 12,
+      "expYear": 2026
+    },
+    "currency": "USD",
+    "balance": 159
+  },
+  {
+    "id": "acct_1003",
+    "firstName": "Taylor",
+    "lastName": "Williams",
+    "card": {
+      "number": "4874904242610184",
+      "ccv": "098",
+      "expMonth": 11,
+      "expYear": 2029
+    },
+    "currency": "EUR",
+    "balance": 0
+  },
+  {
+    "id": "acct_1004",
+    "firstName": "Riley",
+    "lastName": "Jones",
+    "card": {
+      "number": "4358211993405516",
+      "ccv": "712",
+      "expMonth": 12,
+      "expYear": 2027
+    },
+    "currency": "EUR",
+    "balance": 3965
+  },
+  {
+    "id": "acct_1005",
+    "firstName": "Casey",
+    "lastName": "Garcia",
+    "card": {
+      "number": "4758600495697438",
+      "ccv": "025",
+      "expMonth": 4,
+      "expYear": 2030
+    },
+    "currency": "CAD",
+    "balance": 13660
+  },
+  {
+    "id": "acct_1006",
+    "firstName": "Morgan",
+    "lastName": "Miller",
+    "card": {
+      "number": "4858011039128295",
+      "ccv": "823",
+      "expMonth": 10,
+      "expYear": 2028
+    },
+    "currency": "EUR",
+    "balance": 11782
+  },
+  {
+    "id": "acct_1007",
+    "firstName": "Jamie",
+    "lastName": "Davis",
+    "card": {
+      "number": "4894621845583859",
+      "ccv": "887",
+      "expMonth": 5,
+      "expYear": 2030
+    },
+    "currency": "USD",
+    "balance": 0
+  },
+  {
+    "id": "acct_1008",
+    "firstName": "Avery",
+    "lastName": "Rodriguez",
+    "card": {
+      "number": "5506930879026918",
+      "ccv": "976",
+      "expMonth": 4,
+      "expYear": 2026
+    },
+    "currency": "CAD",
+    "balance": 504437
+  },
+  {
+    "id": "acct_1009",
+    "firstName": "Quinn",
+    "lastName": "Martinez",
+    "card": {
+      "number": "4343273260697264",
+      "ccv": "508",
+      "expMonth": 2,
+      "expYear": 2028
+    },
+    "currency": "CAD",
+    "balance": 4399
+  },
+  {
+    "id": "acct_1010",
+    "firstName": "Rowan",
+    "lastName": "Hernandez",
+    "card": {
+      "number": "4986254787956278",
+      "ccv": "725",
+      "expMonth": 10,
+      "expYear": 2028
+    },
+    "currency": "USD",
+    "balance": 504166
+  },
+  {
+    "id": "acct_1011",
+    "firstName": "Parker",
+    "lastName": "Lopez",
+    "card": {
+      "number": "5368606270446312",
+      "ccv": "930",
+      "expMonth": 4,
+      "expYear": 2030
+    },
+    "currency": "USD",
+    "balance": 251954
+  },
+  {
+    "id": "acct_1012",
+    "firstName": "Skyler",
+    "lastName": "Gonzalez",
+    "card": {
+      "number": "4494473672914649",
+      "ccv": "301",
+      "expMonth": 8,
+      "expYear": 2028
+    },
+    "currency": "EUR",
+    "balance": 501429
+  },
+  {
+    "id": "acct_1013",
+    "firstName": "Drew",
+    "lastName": "Wilson",
+    "card": {
+      "number": "5488034801426254",
+      "ccv": "086",
+      "expMonth": 1,
+      "expYear": 2029
+    },
+    "currency": "CAD",
+    "balance": 43622
+  },
+  {
+    "id": "acct_1014",
+    "firstName": "Sydney",
+    "lastName": "Anderson",
+    "card": {
+      "number": "5163247443571491",
+      "ccv": "811",
+      "expMonth": 2,
+      "expYear": 2026
+    },
+    "currency": "CAD",
+    "balance": 2335
+  },
+  {
+    "id": "acct_1015",
+    "firstName": "Blake",
+    "lastName": "Thomas",
+    "card": {
+      "number": "4010749617486099",
+      "ccv": "220",
+      "expMonth": 7,
+      "expYear": 2028
+    },
+    "currency": "USD",
+    "balance": 5129
+  },
+  {
+    "id": "acct_1016",
+    "firstName": "Cameron",
+    "lastName": "Taylor",
+    "card": {
+      "number": "4853000224046458",
+      "ccv": "960",
+      "expMonth": 2,
+      "expYear": 2029
+    },
+    "currency": "EUR",
+    "balance": 15317
+  },
+  {
+    "id": "acct_1017",
+    "firstName": "Reese",
+    "lastName": "Moore",
+    "card": {
+      "number": "4143477869136952",
+      "ccv": "281",
+      "expMonth": 7,
+      "expYear": 2029
+    },
+    "currency": "USD",
+    "balance": 3790
+  },
+  {
+    "id": "acct_1018",
+    "firstName": "Elliot",
+    "lastName": "Jackson",
+    "card": {
+      "number": "4929850491322770",
+      "ccv": "040",
+      "expMonth": 5,
+      "expYear": 2028
+    },
+    "currency": "CAD",
+    "balance": 747
+  },
+  {
+    "id": "acct_1019",
+    "firstName": "Harper",
+    "lastName": "Martin",
+    "card": {
+      "number": "5450304089968978",
+      "ccv": "761",
+      "expMonth": 6,
+      "expYear": 2029
+    },
+    "currency": "CAD",
+    "balance": 16612
+  }
+]

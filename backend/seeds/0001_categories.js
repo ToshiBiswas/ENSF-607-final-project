@@ -1,6 +1,6 @@
 /** @param {import('knex').Knex} knex */
 exports.seed = async (knex) => {
-  await knex('preferencecategories').del();
+  // clear dependent tables first
   await knex('eventscategories').del();
   await knex('categoriesid').del();
 
