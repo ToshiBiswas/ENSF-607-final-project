@@ -1,5 +1,5 @@
 // backend/src/controllers/tickets.controller.js
-const TicketService = require('../services/TicketService');
+const TicketService = require('../services/TicketingService');
 
 class TicketsController {
   // GET /api/tickets  (authenticated user’s tickets)
