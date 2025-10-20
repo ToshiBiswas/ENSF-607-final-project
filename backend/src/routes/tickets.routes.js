@@ -1,9 +1,9 @@
-// src/routes/tickets.js
+// src/routes/tickets.routes.js
 const express = require('express');
 const asyncH = require('../middleware/async');
 const { requireAuth } = require('../middleware/auth');
 const TicketsController = require('../controllers/tickets.controller');
-
+ 
 const router = express.Router();
 
 router.post('/', requireAuth, asyncH(TicketsController.createTicket));
