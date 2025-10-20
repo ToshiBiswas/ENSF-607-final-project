@@ -6,6 +6,17 @@ const { selfOrAdmin } = require('../middleware/allow');
 
 const router = express.Router();
 
+// Validate/normalize :id once for all handlers
+router.param('id', (req, res, next, id) => {
+  const n = Number.parseInt(String(id).trim(), 10);
+  if (!Number.isInteger(n) || n <= 0) {
+    return res.status(400).json({ message: 'Invalid user id' });
+  }
+  req.params.id = n;
+  next();
+});
+
+
 // GET /api/users
 router.get('/', asyncH(ctrl.listUsers));
 
