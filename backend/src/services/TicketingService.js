@@ -1,3 +1,4 @@
+// src/services/TicketingService.js
 const db = require('../db');
 const TicketInfo = require('../models/ticketInfo.model');
 const Tickets = require('../models/ticket.model'); // has infinite retry for ticket_version
@@ -44,6 +45,123 @@ class TicketingService {
       return ticket; // return domain object (Ticket)
     });
   }
+  static async createTicket(user, body) {
+    if (!user?.id) {
+      const err = new Error('Unauthorized');
+      err.status = 401;
+      throw err;
+    }
+
+    const eventId = Number.parseInt(String(body?.eventId ?? ''), 10);
+    const quantity = Number.isFinite(body?.quantity) ? Number(body.quantity) : 1;
+    const ticketType = (body?.ticketType || 'general').trim();
+    const ticketInfoId = body?.ticketInfoId ? Number(body.ticketInfoId) : null;
+    const explicitPrice = body?.price; // optional override
+
+    if (!Number.isInteger(eventId) || eventId <= 0) {
+      const err = new Error('Invalid event id');
+      err.status = 400;
+      throw err;
+    }
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      const err = new Error('Quantity must be a positive integer');
+      err.status = 400;
+      throw err;
+    }
+
+    const created = [];
+    for (let i = 0; i < quantity; i++) {
+      const ticket = await TicketingService.purchase({
+        user_id: user.id,
+        event_id: eventId,
+        ticket_type: ticketType,
+        price: explicitPrice,        // if null, purchase() falls back to TicketInfo price
+        ticket_info_id: ticketInfoId // if null, purchase() resolves by (event_id, type)
+      });
+      created.push(ticket);
+    }
+
+    const unitPrice = (explicitPrice != null)
+      ? Number(explicitPrice)
+      : Number(created[0]?.price ?? 0);
+    const totalPaid = (unitPrice * quantity).toFixed(2);
+
+    // If you have currency on TicketInfo or ticket row, return it; else default
+    const currency = created[0]?.currency || 'USD';
+
+    return { data: created, quantity, totalPaid, currency };
+  }
+   static async getMyTickets(user, query) {
+    if (!user?.id) {
+      const err = new Error('Unauthorized');
+      err.status = 401;
+      throw err;
+    }
+    const page = Math.max(parseInt(query?.page || '1', 10), 1);
+    const pageSize = Math.min(Math.max(parseInt(query?.pageSize || '10', 10), 1), 100);
+    const status = query?.status;
+    const upcoming = String(query?.upcoming) === 'true';
+
+    const base = db('tickets as t')
+      .leftJoin('events as e', 'e.id', 't.event_id')
+      .where('t.user_id', user.id)
+      .modify((qb) => {
+        if (status) qb.andWhere('t.status', status);
+        if (upcoming) qb.andWhere('e.start_at', '>=', db.fn.now());
+      });
+
+    const [{ count }] = await base.clone().clearSelect().clearOrder().count({ count: '*' });
+    const rows = await base
+      .select([
+        't.id', 't.event_id', 't.user_id', 't.quantity',
+        't.price_paid', 't.currency', 't.status',
+        't.created_at', 't.updated_at',
+        'e.title as event_title', 'e.venue as event_venue',
+        'e.start_at as event_start', 'e.end_at as event_end',
+      ])
+      .orderBy('t.created_at', 'desc')
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+
+    return { page, pageSize, total: Number(count), data: rows };
+  },
+
+  /**
+   * One ticket by id (must belong to current user), with event info.
+   */
+  static async getTicketById(user, id) {
+    if (!user?.id) {
+      const err = new Error('Unauthorized');
+      err.status = 401;
+      throw err;
+    }
+    const ticketId = Number.parseInt(String(id ?? ''), 10);
+    if (!Number.isInteger(ticketId) || ticketId <= 0) {
+      const err = new Error('Invalid ticket id');
+      err.status = 400;
+      throw err;
+    }
+
+    const row = await db('tickets as t')
+      .leftJoin('events as e', 'e.id', 't.event_id')
+      .select([
+        't.id', 't.event_id', 't.user_id', 't.quantity',
+        't.price_paid', 't.currency', 't.status',
+        't.created_at', 't.updated_at',
+        'e.title as event_title', 'e.venue as event_venue',
+        'e.start_at as event_start', 'e.end_at as event_end',
+      ])
+      .where('t.id', ticketId)
+      .andWhere('t.user_id', user.id)
+      .first();
+
+    if (!row) {
+      const err = new Error('Ticket not found');
+      err.status = 404;
+      throw err;
+    }
+    return { data: row };
+  },
 }
 
 module.exports = TicketingService;

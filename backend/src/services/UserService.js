@@ -1,3 +1,4 @@
+// src/services/UserServices.js
 // Uses the MVC-style model instead of a repository
 const UserModel = require('../models/user.model');
 
