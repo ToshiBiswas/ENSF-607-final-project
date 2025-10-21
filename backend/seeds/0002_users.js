@@ -1,21 +1,30 @@
-const bcrypt = require('bcrypt');
-
 /** @param {import('knex').Knex} knex */
 exports.seed = async (knex) => {
-  // clear children first
-  await knex('notifications').del();
-  await knex('payments').del();
-  await knex('tickets').del();
-  await knex('userpreferences').del();
-  await knex('events').del();
+  // Wipe in dependency order
+  await knex('notifications').del().catch(() => {});
+  await knex('payments').del().catch(() => {});
+  await knex('tickets').del().catch(() => {});
+  await knex('ticketinfo').del().catch(() => {});
+  await knex('eventscategories').del().catch(() => {});
+  await knex('events').del().catch(() => {});
+  await knex('userpreferences').del().catch(() => {});
   await knex('users').del();
 
-  const hash = (p) => bcrypt.hash(p, 12);
+  const now = knex.fn.now();
+  // Pre-hash for demo only (Password123!); replace in prod
+  const HASH = '$2b$12$7R3fp1e.0q0p3yQyX9a6AunUO5T1rH2r8xwJqXoI3r9m0nq5JwPce';
+
+  const [adminId] = await knex('users').insert({
+    name: 'Admin',
+    email: 'admin@example.com',
+    password_hash: HASH,
+    role: 'admin',
+    created_at: now,
+  });
 
   await knex('users').insert([
-    { name: 'Admin', email: 'admin@mindplanner.io', password_hash: await hash('Admin!234'), role: 'admin' },
-    { name: 'Ava Patel', email: 'ava.patel@example.com', password_hash: await hash('User!234'), role: 'user' },
-    { name: 'Liam Chen', email: 'liam.chen@example.com', password_hash: await hash('User!234'), role: 'user' },
-    { name: 'Sofia Garcia', email: 'sofia.garcia@example.com', password_hash: await hash('User!234'), role: 'user' }
+    { name: 'Ava Patel',    email: 'ava@example.com',    password_hash: HASH, role: 'user', created_at: now },
+    { name: 'Liam Chen',    email: 'liam@example.com',   password_hash: HASH, role: 'user', created_at: now },
+    { name: 'Sofia Garcia', email: 'sofia@example.com',  password_hash: HASH, role: 'user', created_at: now },
   ]);
 };
