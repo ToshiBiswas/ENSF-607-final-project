@@ -162,6 +162,96 @@ class TicketingService {
     }
     return { data: row };
   },
-}
 
+static async updateTicket(user, id, patch) {
+    if (!user?.id) {
+      const err = new Error('Unauthorized');
+      err.status = 401;
+      throw err;
+    }
+    const ticketId = Number.parseInt(String(id ?? ''), 10);
+    if (!Number.isInteger(ticketId) || ticketId <= 0) {
+      const err = new Error('Invalid ticket id');
+      err.status = 400;
+      throw err;
+    }
+
+    // Restrict what can be updated
+    const allowed = {};
+    if (typeof patch?.status === 'string') {
+      allowed.status = patch.status.trim();
+    }
+
+    if (Object.keys(allowed).length === 0) {
+      const err = new Error('No updatable fields provided');
+      err.status = 400;
+      throw err;
+    }
+
+    // Ensure ticket belongs to user
+    const exists = await db('tickets')
+      .where({ id: ticketId, user_id: user.id })
+      .first();
+
+    if (!exists) {
+      const err = new Error('Ticket not found');
+      err.status = 404;
+      throw err;
+    }
+
+    await db('tickets')
+      .where({ id: ticketId, user_id: user.id })
+      .update({ ...allowed, updated_at: db.fn.now() });
+
+    // Return updated record (with event info for parity with other getters)
+    const updated = await db('tickets as t')
+      .leftJoin('events as e', 'e.id', 't.event_id')
+      .select([
+        't.id', 't.event_id', 't.user_id', 't.quantity',
+        't.price_paid', 't.currency', 't.status',
+        't.created_at', 't.updated_at',
+        'e.title as event_title', 'e.venue as event_venue',
+        'e.start_at as event_start', 'e.end_at as event_end',
+      ])
+      .where('t.id', ticketId)
+      .andWhere('t.user_id', user.id)
+      .first();
+
+    return { data: updated };
+  }
+
+  /**
+   * Delete a ticket that belongs to the current user.
+   */
+  static async deleteTicket(user, id) {
+    if (!user?.id) {
+      const err = new Error('Unauthorized');
+      err.status = 401;
+      throw err;
+    }
+    const ticketId = Number.parseInt(String(id ?? ''), 10);
+    if (!Number.isInteger(ticketId) || ticketId <= 0) {
+      const err = new Error('Invalid ticket id');
+      err.status = 400;
+      throw err;
+    }
+
+    // Verify ownership
+    const exists = await db('tickets')
+      .where({ id: ticketId, user_id: user.id })
+      .first();
+
+    if (!exists) {
+      const err = new Error('Ticket not found');
+      err.status = 404;
+      throw err;
+    }
+
+    await db('tickets')
+      .where({ id: ticketId, user_id: user.id })
+      .del();
+
+    return { id: ticketId, deleted: true };
+  }
+}
 module.exports = TicketingService;
