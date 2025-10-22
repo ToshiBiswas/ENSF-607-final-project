@@ -8,7 +8,7 @@
 class Notification {
   constructor({
     id,           // notification_id (PK)
-    userId,       // FK → users.user_id
+    user,       // FK → users.user_id
     eventId = null,
     message,
     sentAt = null,
@@ -16,7 +16,7 @@ class Notification {
     createdAt = null,
   }) {
     this.id = id;
-    this.userId = userId;
+    this.user = user;
     this.eventId = eventId;
     this.message = message;
     this.sentAt = sentAt;
@@ -28,7 +28,7 @@ class Notification {
   toDTO() {
     return {
       notification_id: this.id,
-      user_id: this.userId,
+      user_id: this.user,
       event_id: this.eventId,
       message: this.message,
       sent_at: this.sentAt,
@@ -42,7 +42,7 @@ class Notification {
     if (!row) return null;
     return new Notification({
       id: row.notification_id,
-      userId: row.user_id,
+      user: row.user_id,
       eventId: row.event_id ?? null,
       message: row.message,
       sentAt: row.sent_at ?? null,
