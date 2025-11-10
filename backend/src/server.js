@@ -1,5 +1,9 @@
-require('dotenv').config();
+// src/server.js
+// Small wrapper so Docker or `node src/server.js` works.
+// It imports the documented Express app from ./app.js and starts listening.
 const app = require('./app');
 
-const PORT = Number(process.env.PORT || 3000);
-app.listen(PORT, () => console.log(`API listening on http://localhost:${PORT}`));
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`API listening on :${port}`);
+});
