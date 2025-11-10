@@ -1,142 +1,105 @@
-const db = require('../db');
-const axios = require('axios');
-const Events = require('../models/event.model');
-const TicketInfo = require('../models/ticketInfo.model');
-const Tickets = require('../models/ticket.model');
-const Notifications = require('../models/notification.model');
-
-const isAdmin = (u) => u?.role === 'admin';
-const isOwner = (u, event) => u?.user_id === event?.organizer_id;
-
 /**
- * Business logic / transactions / permissions.
+ * EventService
+ * Implements organizer permissions, category and ticket setup,
+ * increase-only ticket policy, and refunds on deletion.
  */
+const { knex } = require('../config/db');
+const { AppError } = require('../utils/errors');
+const { EventRepo } = require('../repositories/EventRepo');
+const { CategoryRepo } = require('../repositories/CategoryRepo');
+const { PaymentRepo } = require('../repositories/PaymentRepo');
+const { NotificationService } = require('./NotificationService');
+const { NotificationRepo } = require('../repositories/NotificationRepo');
+
 class EventService {
-  static async getEventInfo(eventId) {
-    if (!Number.isInteger(eventId)) throw new Error('Invalid event id');
-    const event = await Events.findById(eventId);
-    if (!event) throw new Error('Event not found');
-    const tickets = await TicketInfo.findByEventId(eventId);
-    return { ...event, tickets };
+  /**
+   * Create a new event and attach categories + initial ticket types.
+   * @param {number} organizerId
+   * @param {object} payload - { title, description, location, startTime, endTime, ticketType, categories[], ticketInfos[] }
+   */
+  static async createEvent(organizerId, { title, description, location, startTime, endTime, ticketType = 'general', categories = [], ticketInfos = [] }) {
+    const evt = await EventRepo.insert({ organizerId, title, description, location, startTime, endTime, ticketType });
+    // Normalize/attach categories
+    const catIds = [];
+    for (const v of categories) {
+      const c = await CategoryRepo.findOrCreate(v);
+      catIds.push(c.categoryId);
+    }
+    await EventRepo.attachCategories(evt.eventId, catIds);
+    // Insert ticket types
+    await EventRepo.upsertTicketInfos(evt.eventId, ticketInfos);
+    return EventRepo.findById(evt.eventId);
   }
 
-  static async createEvent(actor, payload) {
-    if (!actor) throw new Error('Unauthorized');
+  /** Query by a category value */
+  static async listByCategory(value) {
+    return EventRepo.findByCategoryValue(value);
+  }
 
-    const {
-      title, description, location, start_time, end_time, tickets = []
-    } = payload || {};
+  /**
+   * Update event attributes + increase-only ticket totals.
+   * Throws if a negative delta is provided.
+   */
+  static async updateEvent(organizerId, eventId, { title, description, location, startTime, endTime, ticketInfosIncreaseOnly = [] }) {
+    const evt = await EventRepo.findById(eventId);
+    if (!evt) throw new AppError('Event not found', 404);
+    if (evt.organizer.userId !== organizerId) throw new AppError('Forbidden', 403);
 
-    if (!title || !location || !start_time || !end_time) {
-      throw new Error('Missing required fields');
+    await knex('events').where({ event_id: eventId }).update({
+      title: title ?? evt.title,
+      description: description ?? evt.description,
+      location: location ?? evt.location,
+      start_time: startTime ? new Date(startTime) : evt.startTime,
+      end_time: endTime ? new Date(endTime) : evt.endTime,
+      updated_at: knex.fn.now()
+    });
+
+    // Enforce increase-only
+    for (const u of ticketInfosIncreaseOnly) {
+      if (u.quantityDelta < 0) throw new AppError('Cannot decrease total tickets', 400);
+    }
+    await EventRepo.updateTicketsIncreaseOnly(eventId, ticketInfosIncreaseOnly);
+    return EventRepo.findById(eventId);
+  }
+
+  /**
+   * Delete event:
+   *  - Refund all approved payments for the event using PaymentService
+   *  - Notify all purchasers + organizer via NotificationService
+   *  - Finally remove the event
+   */
+  static async deleteEvent(organizerId, eventId, paymentService) {
+    const evt = await EventRepo.findById(eventId);
+    if (!evt) throw new AppError('Event not found', 404);
+    if (evt.organizer.userId !== organizerId) throw new AppError('Forbidden', 403);
+
+    // Gather all successful payments to refund
+    const approved = await PaymentRepo.listApprovedForEvent(eventId);
+    for (const p of approved) {
+      try {
+        await paymentService.refund(p.paymentId, p.amountCents, `event-${eventId}-canceled`);
+      } catch (e) {
+        // Keep iterating but record failure (could enqueue retry logic)
+        console.warn('Refund failed', p.paymentId, e.message);
+      }
+      await NotificationService.notify({
+        userId: p.user.userId,
+        type: 'refund_issued',
+        message: `Event canceled. Your payment ${p.paymentId} was refunded.`,
+        eventId,
+        paymentId: p.paymentId
+      });
     }
 
-    return db.transaction(async (trx) => {
-      const event_id = await Events.create(trx, {
-        title, description, location, organizer_id: actor.user_id, start_time, end_time
-      });
-
-      for (const t of Array.isArray(tickets) ? tickets : []) {
-        if (!t.ticket_type || t.ticket_price == null || t.tickets_quantity == null) continue;
-        await TicketInfo.create(trx, {
-          event_id,
-          ticket_type: t.ticket_type,
-          ticket_price: t.ticket_price,
-          tickets_quantity: t.tickets_quantity,
-          tickets_left: t.tickets_quantity
-        });
-      }
-
-      const all = await TicketInfo.findByEventIdTrx(trx, event_id);
-      return { event_id, title, description, location, organizer_id: actor.user_id, start_time, end_time, tickets: all };
+    await NotificationRepo.deleteRemindersForEvent(eventId);
+    // Organizer heads-up
+    await NotificationService.notify({
+      userId: organizerId, type: 'event_canceled',
+      message: `Your event ${evt.title} was canceled`, eventId
     });
-  }
-
-  static async updateEvent(actor, eventId, payload) {
-    if (!actor) throw new Error('Unauthorized');
-    const event = await Events.findById(eventId);
-    if (!event) throw new Error('Event not found');
-    if (!isAdmin(actor) && !isOwner(actor, event)) throw new Error('Forbidden');
-
-    const { title, description, location, start_time, end_time, tickets = [] } = payload || {};
-
-    return db.transaction(async (trx) => {
-      const patch = {};
-      if (title        !== undefined) patch.title = title;
-      if (description  !== undefined) patch.description = description;
-      if (location     !== undefined) patch.location = location;
-      if (start_time   !== undefined) patch.start_time = start_time;
-      if (end_time     !== undefined) patch.end_time = end_time;
-
-      if (Object.keys(patch).length) await Events.update(trx, eventId, patch);
-
-      for (const t of Array.isArray(tickets) ? tickets : []) {
-        if (t.info_id) {
-          const row = await TicketInfo.findByIdTrx(trx, t.info_id, eventId);
-          if (!row) throw new Error(`ticketinfo not found: ${t.info_id}`);
-
-          const newQty = t.tickets_quantity !== undefined ? Number(t.tickets_quantity) : row.tickets_quantity;
-          if (newQty < row.tickets_quantity) throw new Error('Cannot reduce ticket quantity');
-
-          const delta = newQty - row.tickets_quantity;
-          const newLeft = Math.max(0, Math.min(row.tickets_left + delta, newQty));
-
-          await TicketInfo.update(trx, t.info_id, {
-            ticket_price: t.ticket_price ?? row.ticket_price,
-            tickets_quantity: newQty,
-            tickets_left: newLeft
-          });
-        } else if (t.ticket_type && t.ticket_price != null && t.tickets_quantity != null) {
-          await TicketInfo.create(trx, {
-            event_id: eventId,
-            ticket_type: t.ticket_type,
-            ticket_price: t.ticket_price,
-            tickets_quantity: t.tickets_quantity,
-            tickets_left: t.tickets_quantity
-          });
-        }
-      }
-    });
-  }
-
-  static async deleteEventWithRefunds(actor, eventId) {
-    if (!actor) throw new Error('Unauthorized');
-    const event = await Events.findById(eventId);
-    if (!event) throw new Error('Event not found');
-    if (!isAdmin(actor) && !isOwner(actor, event)) throw new Error('Forbidden');
-
-    // all user tickets + payment ids
-    const rows = await Tickets.getTicketsWithPaymentsAndUsers(eventId);
-
-    let refundCount = 0;
-    await db.transaction(async (trx) => {
-      for (const r of rows) {
-        if (r.payment_id) {
-          try {
-            await axios.post(process.env.REFUNDS_API_URL || 'http://localhost:3001/v1/refunds', {
-              paymentId: r.payment_id,
-              reason: `Event "${event.title}" canceled`
-            });
-            refundCount++;
-          } catch (e) {
-            console.warn(`Refund failed for payment ${r.payment_id}: ${e.message}`);
-          }
-        }
-        if (r.user_id) {
-          // notification that refund was issued
-          await Notifications.create(trx, {
-            user_id: r.user_id,
-            event_id: eventId,
-            message: `Your ticket for "${event.title}" has been refunded.`,
-            sent_at: trx.raw('NOW()')
-          });
-        }
-      }
-      await Events.remove(trx, eventId); // CASCADE will delete children
-    });
-
-    return { refunded: refundCount, notified: rows.filter(r => r.user_id).length };
+    await EventRepo.deleteEvent(eventId);
+    return { deleted: true };
   }
 }
 
-module.exports = EventService;
+module.exports = { EventService };

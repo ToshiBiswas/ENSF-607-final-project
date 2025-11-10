@@ -1,16 +1,16 @@
 FROM node:20-alpine
-
 WORKDIR /app
 
-# Install deps first (better layer caching)
-COPY package.json package-lock.json* ./
+COPY package*.json ./
 RUN npm ci
 
-# Copy source
-COPY . .
+# bring in code & knex files
+COPY src ./src
+COPY knexfile.js .
+COPY migrations ./migrations
+COPY seeds ./seeds
 
-ENV NODE_ENV=development
+ENV NODE_ENV=production
 EXPOSE 3000
+CMD ["node", "src/server.js"]
 
-# Start the server (CommonJS)
-CMD ["node", "-r", "dotenv/config", "src/server.js"]

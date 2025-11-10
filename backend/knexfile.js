@@ -13,7 +13,7 @@ module.exports = {
     connection: {
       host: process.env.DB_HOST || 'db',
       port: Number(process.env.DB_PORT || 3306),
-      database: process.env.DB_NAME || 'mindplanner', 
+      database: process.env.DB_NAME || 'mindplanner',   
       user: process.env.DB_USER || 'mindplanner',
       password: process.env.DB_PASS || 'secret'
     }
