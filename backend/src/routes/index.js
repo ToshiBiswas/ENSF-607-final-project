@@ -10,6 +10,7 @@ const { EventsController } = require('../controllers/EventsController');
 const { UsersController } = require('../controllers/UsersController');
 const { CartController } = require('../controllers/CartController');
 const { PaymentsController } = require('../controllers/PaymentsController');
+const { NotificationController } = require('../controllers/NotificationController'); // <-- NEW
 
 const r = Router();
 
@@ -40,5 +41,11 @@ r.post('/cart/checkout', requireAuth, CartController.checkout);
 /* ---------- PAYMENTS ---------- */
 r.post('/payments/verify-card', requireAuth, PaymentsController.verifyCard);
 r.post('/payments/refund', requireAuth, PaymentsController.refund);
+
+/* ---------- NOTIFICATIONS ---------- */
+// Processes and sends all pending notifications due as of "now"
+r.get('/notifications/due', requireAuth, NotificationController.getDue);
+// Create/schedule a new notification for an event (requires body.eventId)
+r.post('/notifications', requireAuth, NotificationController.create);
 
 module.exports = r;

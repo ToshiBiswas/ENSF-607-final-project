@@ -117,7 +117,21 @@ class EventRepo {
 
   /** Hard delete an event (cascade behaviour relies on FKs) */
   static async deleteEvent(eventId) {
-    await knex('events').where({ event_id: eventId }).del();
+    await knex.transaction(async (trx) => {
+      // Delete minted tickets for this event if the 'tickets' table exists
+      let hasTicketsTable = false;
+      try { hasTicketsTable = await trx.schema.hasTable('tickets'); } catch (_) { /* ignore */ }
+
+      if (hasTicketsTable) {
+        await trx('tickets').where({ event_id: eventId }).del();
+      }
+
+      // Delete ticket types for this event
+      await trx('ticketinfo').where({ event_id: eventId }).del();
+
+      // Finally delete the event row
+      await trx('events').where({ event_id: eventId }).del();
+    });
   }
 }
 

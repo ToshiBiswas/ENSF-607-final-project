@@ -5,11 +5,11 @@
 const asyncHandler = require('../utils/handler');
 const { UserService } = require('../services/UserService');
 const { PaymentInfoRepo } = require('../repositories/PaymentInfoRepo');
+const { UserRepo } = require('../repositories/UserRepo');
 
 class UsersController {
   /** GET /api/me */
   static me = asyncHandler(async (req, res) => {
-    const { UserRepo } = require('../repositories/UserRepo');
     const user = await UserRepo.findById(req.user.userId);
     res.json({ user });
   });

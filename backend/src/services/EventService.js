@@ -9,6 +9,7 @@ const { EventRepo } = require('../repositories/EventRepo');
 const { CategoryRepo } = require('../repositories/CategoryRepo');
 const { PaymentRepo } = require('../repositories/PaymentRepo');
 const { NotificationService } = require('./NotificationService');
+const { NotificationRepo } = require('../repositories/NotificationRepo');
 
 class EventService {
   /**
@@ -90,12 +91,12 @@ class EventService {
       });
     }
 
+    await NotificationRepo.deleteRemindersForEvent(eventId);
     // Organizer heads-up
     await NotificationService.notify({
       userId: organizerId, type: 'event_canceled',
       message: `Your event ${evt.title} was canceled`, eventId
     });
-
     await EventRepo.deleteEvent(eventId);
     return { deleted: true };
   }

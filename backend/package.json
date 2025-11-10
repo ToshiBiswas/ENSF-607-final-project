@@ -24,6 +24,8 @@
   "devDependencies": {
     "dotenv": "^17.2.3",
     "jest": "^30.2.0",
-    "supertest": "^7.1.4"
+    "supertest": "^7.1.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }

@@ -18,6 +18,17 @@ class CategoryRepo {
     const row = await knex('categoriesid').where({ category_value: value }).first();
     return row ? new Category({ categoryId: row.category_id, value: row.category_value }) : null;
   }
+  static async getAll() {
+    const rows = await this.db(this.table)
+      .select('category_id', 'category_value')
+      .orderBy('category_value', 'asc');
+
+    return rows.map(r => new Category({
+      categoryId: r.category_id,
+      value: r.category_value,
+    }));
+  }
 }
+
 
 module.exports = { CategoryRepo };
