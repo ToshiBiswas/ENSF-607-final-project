@@ -49,6 +49,13 @@ class EventService {
    * - Enforces unique title (case-insensitive)
    * - Attaches categories and upserts ticket infos
    */
+  static async listMine(organizerId) {
+    const id = Number(organizerId);
+    if (!Number.isInteger(id) || id <= 0) {
+      throw new AppError('Invalid organizer id', 400, { code: 'BAD_ORGANIZER_ID' });
+    }
+    return EventRepo.listByOrganizer(id);
+  }
   static async createEvent(
     organizerId,
     { title, description, location, startTime, endTime, ticketType = 'general', categories = [], ticketInfos = [] }
@@ -70,8 +77,7 @@ class EventService {
       description,
       location,
       startTime,
-      endTime,
-      ticketType
+      endTime
     });
 
     if (categoryIds.length) {
@@ -81,7 +87,7 @@ class EventService {
     if (Array.isArray(ticketInfos) && ticketInfos.length) {
       await EventRepo.upsertTicketInfos(evt.eventId, ticketInfos);
     }
-
+    
     return EventRepo.findById(evt.eventId);
   }
     /**
