@@ -31,6 +31,7 @@ r.get('/categories',CategoryController.categories)
 
 /* ---------- USER ---------- */
 r.get('/me', requireAuth, UsersController.me);
+r.get('/auth/me', requireAuth, UsersController.me); 
 r.patch('/me', requireAuth, UsersController.updateProfile);
 r.get('/me/payment-methods', requireAuth, UsersController.paymentMethods);
 r.put('/me/preferences', requireAuth, UsersController.setPreferences);

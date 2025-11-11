@@ -1,4 +1,7 @@
+// Delete this file
+
 // middleware/requireAuth.js
+
 'use strict';
 
 const jwt = require('jsonwebtoken');
