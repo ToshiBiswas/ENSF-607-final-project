@@ -2,7 +2,7 @@
 exports.up = async (knex) => {
   await knex.schema.createTable('tickets', (t) => {
     t.increments('ticket_id').primary();
-    t.string('code', 6).notNullable().unique(); // 6-digit, unique
+    t.string('code', 15).notNullable().unique(); // 6-digit, unique
 
     t.integer('user_id').unsigned().notNullable()
       .references('user_id').inTable('users').onDelete('CASCADE');
