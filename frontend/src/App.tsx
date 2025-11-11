@@ -1,18 +1,27 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+// import React from "react";
 
-function App() {
-  const [count, setCount] = useState(0)
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
+import Homepage from "./pages/homepage";
+import MyAccount from "./pages/MyAccount";
+
+function App(){
   return (
-    <>
-       <h1 className="text-3xl font-bold underline">
-        Hello world!
-      </h1>
-    </>
+    <Router>
+
+      {/* Navbar visible in all pages */}
+      {/* <Navbar />*/}
+
+      {/* Routes define what component appears for each URL path */}
+      <Routes>
+        {/* When user visits /, show homepage */}
+        <Route path="/" element={<Homepage />} />
+        <Route path="/MyAccount" element={<MyAccount />} />
+
+      </Routes>
+    </Router>
   )
 }
 
-export default App
+export default App;
+
