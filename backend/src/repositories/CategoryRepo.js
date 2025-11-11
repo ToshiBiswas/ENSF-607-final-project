@@ -19,7 +19,7 @@ class CategoryRepo {
     return row ? new Category({ categoryId: row.category_id, value: row.category_value }) : null;
   }
   static async getAll() {
-    const rows = await this.db(this.table)
+    const rows = await knex('categoriesid')
       .select('category_id', 'category_value')
       .orderBy('category_value', 'asc');
 

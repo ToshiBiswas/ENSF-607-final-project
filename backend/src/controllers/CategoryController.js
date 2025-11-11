@@ -1,0 +1,21 @@
+
+const { CategoryRepo } = require("../repositories/CategoryRepo");
+const asyncHandler = require('../utils/handler');
+
+class CategoryController {
+
+  /**
+   * GET /api/categories
+   * List every available category.
+   */
+  static categories = asyncHandler(async (req, res) => {
+    const evt = await CategoryRepo.getAll();
+    if (!evt) return res.status(404).json({ error: 'Not found' });
+    res.json({ ...evt});
+  });
+
+
+
+}
+
+module.exports = { CategoryController };

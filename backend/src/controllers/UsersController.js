@@ -4,8 +4,8 @@
  */
 const asyncHandler = require('../utils/handler');
 const { UserService } = require('../services/UserService');
-const { PaymentInfoRepo } = require('../repositories/PaymentInfoRepo');
 const { UserRepo } = require('../repositories/UserRepo');
+const { UserCardRepo } = require('../repositories/UserCardRepo');
 
 class UsersController {
   /** GET /api/me */
@@ -28,7 +28,7 @@ class UsersController {
 
   /** GET /api/me/payment-methods  (list stored cards) */
   static paymentMethods = asyncHandler(async (req, res) => {
-    const list = await PaymentInfoRepo.listForUser(req.user.userId);
+    const list = await UserCardRepo.listForUser(req.user.userId);
     res.json({ paymentMethods: list });
   });
 }

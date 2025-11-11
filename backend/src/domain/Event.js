@@ -27,6 +27,9 @@ class Event {
   isActive(at = new Date()) {
     return at >= this.startTime && at <= this.endTime;
   }
+  purchasable(at = new Date()) {
+    return at <= this.startTime;
+  }
 }
 
 module.exports = { Event };

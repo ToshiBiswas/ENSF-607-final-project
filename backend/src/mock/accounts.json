@@ -1,4 +1,4 @@
-export default [
+[
   {
     "id": "acct_001",
     "number": "4000005260181590",
@@ -18,7 +18,7 @@ export default [
     "name": "Jordan Kim",
     "balance_cents": 434508,
     "currency": "CAD"
-  },
+  },  
   {
     "id": "acct_003",
     "number": "4000009139099603",
@@ -199,4 +199,4 @@ export default [
     "balance_cents": 285778,
     "currency": "CAD"
   }
-] as const;
+]

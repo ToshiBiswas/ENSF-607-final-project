@@ -4,7 +4,7 @@
  * Only non-sensitive fields (like last4/exp) are persisted here.
  */
 class PaymentInfo {
-  constructor({ paymentInfoId, owner, accountId, name, last4, expMonth, expYear, currency, primary = false }) {
+  constructor({ paymentInfoId, owner, accountId, name, last4, expMonth, expYear, currency}) {
     this.paymentInfoId = paymentInfoId;
     this.owner = owner; // User
     this.accountId = accountId;
@@ -13,7 +13,6 @@ class PaymentInfo {
     this.expMonth = expMonth;
     this.expYear = expYear;
     this.currency = currency || 'CAD';
-    this.primary = primary;
   }
 }
 
