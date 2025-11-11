@@ -27,6 +27,14 @@ class EventsController {
     const evt = await EventService.createEvent(organizerId, payload);
     res.status(201).json({ event: evt });
   });
+  /**
+   * GET /api/events
+   * Returns all events created by the authenticated organizer (no query).
+   */
+  static listMine = asyncHandler(async (req, res) => {
+    const events = await EventService.listMine(req.user.userId);
+    res.json({ events });
+  });
 
   /**
    * GET /api/events/:id

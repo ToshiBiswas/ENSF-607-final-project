@@ -32,7 +32,7 @@ class NotificationService {
 
   /**
    * Kept for compatibility; no batch “deliver” step in the polling model.
-   * @returns {Promise<{delivered:number, mode:string}>}
+   * @returns {Promise<{delivered:number, mode:string}>}\
    */
   static async deliverDue(/* { now = new Date(), limit = 100 } = {} */) {
     // No-op: nothing to mark as sent; frontend polls to fetch due notifications.
