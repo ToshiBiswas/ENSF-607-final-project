@@ -8,6 +8,7 @@ const morgan = require('morgan');
 //Central route registry
 const routes = require('./routes');
 const adviceRoutes = require('./routes/advice.routes.cjs');
+const payoutRoutes = require('./routes/payout.routes.cjs');
 
 //Error helpers
 const { errorMiddleware, notFound } = require('./utils/errors');
@@ -25,6 +26,8 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 app.use('/api', routes);
 
 app.use('/api', adviceRoutes);
+
+app.use('/api', payoutRoutes);
 
 //404 handler for unrecognized routes
 app.use(notFound);
