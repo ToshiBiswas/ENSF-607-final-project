@@ -28,6 +28,7 @@
 require('dotenv').config();
 const express = require('express');
 const morgan = require('morgan');
+const cors = require('cors');
 
 // Central route registry
 const routes = require('./routes');
@@ -36,6 +37,12 @@ const routes = require('./routes');
 const { errorMiddleware, notFound } = require('./utils/errors');
 
 const app = express();
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+}));
 
 // JSON body parsing
 app.use(express.json());

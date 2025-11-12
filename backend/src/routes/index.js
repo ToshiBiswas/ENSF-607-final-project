@@ -30,6 +30,8 @@ r.get('/me', requireAuth, UsersController.me);
 r.patch('/me', requireAuth, UsersController.updateProfile);
 r.get('/me/payment-methods', requireAuth, UsersController.paymentMethods);
 r.put('/me/preferences', requireAuth, UsersController.setPreferences);
+r.get('/me/tickets', requireAuth, UsersController.tickets);
+r.get('/me/payments', requireAuth, UsersController.payments);
 
 /* ---------- CART ---------- */
 r.post('/cart/items', requireAuth, CartController.add);

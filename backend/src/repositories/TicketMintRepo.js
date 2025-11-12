@@ -45,6 +45,24 @@ class TicketMintRepo {
     }
     return _mem.get(paymentId) || [];
   }
+
+  /** List all tickets for a user */
+  static async listForUser(userId) {
+    if (await tableExists()) {
+      const rows = await knex('tickets').where({ user_id: userId }).orderBy('created_at', 'desc');
+      return rows.map(r => new Ticket({ ticketId: r.ticket_id, code: r.code, owner: { userId: r.user_id }, event: { eventId: r.event_id }, ticketInfo: { infoId: r.info_id }, payment: { paymentId: r.payment_id } }));
+    }
+    // In-memory fallback: collect all tickets for user
+    const allTickets = [];
+    for (const tickets of _mem.values()) {
+      for (const ticket of tickets) {
+        if (ticket.owner.userId === userId) {
+          allTickets.push(ticket);
+        }
+      }
+    }
+    return allTickets;
+  }
 }
 
 module.exports = { TicketMintRepo };

@@ -56,6 +56,12 @@ class PaymentRepo {
     const rows = await knex('payments').where({ event_id: eventId, status: 'approved' });
     return Promise.all(rows.map(r => this.findById(r.payment_id)));
   }
+
+  /** List all payments for a user */
+  static async listForUser(userId) {
+    const rows = await knex('payments').where({ user_id: userId }).orderBy('created_at', 'desc');
+    return Promise.all(rows.map(r => this.findById(r.payment_id)));
+  }
 }
 
 module.exports = { PaymentRepo };

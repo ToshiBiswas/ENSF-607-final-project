@@ -30,9 +30,13 @@ class EventService {
     return EventRepo.findById(evt.eventId);
   }
 
-  /** Query by a category value */
+  /** Query by a category value, or return all events if no category provided */
   static async listByCategory(value) {
-    return EventRepo.findByCategoryValue(value);
+    if (value) {
+      return EventRepo.findByCategoryValue(value);
+    }
+    // Return all events if no category filter
+    return EventRepo.findAll();
   }
 
   /**

@@ -56,7 +56,14 @@ class EventRepo {
       .join('eventscategories as ec', 'e.event_id', 'ec.event_id')
       .join('categoriesid as c', 'c.category_id', 'ec.category_id')
       .where('c.category_value', value)
-      .select('e.*');
+      .select('e.*')
+      .distinct();
+    return Promise.all(rows.map(r => this.toDomain(r)));
+  }
+
+  /** List all events */
+  static async findAll() {
+    const rows = await knex('events').select('*').orderBy('start_time', 'asc');
     return Promise.all(rows.map(r => this.toDomain(r)));
   }
 
