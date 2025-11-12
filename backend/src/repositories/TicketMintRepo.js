@@ -14,6 +14,34 @@ class TicketMintRepo {
    * @param {*} trx optional knex transaction
    * @returns {Promise<Ticket>}
    */
+    static async findByCodeForEvent(eventId, code, trx = null) {
+    const q = trx || knex;
+    const row = await q('tickets as t')
+      .leftJoin('ticketinfo as ti', 'ti.info_id', 't.info_id')
+      .leftJoin('events as e', 'e.event_id', 't.event_id')
+      .select(
+        // ticket columns
+        't.ticket_id as id',
+        't.code',
+        't.user_id',
+        't.event_id',
+        't.info_id',
+        't.payment_id',
+        // event columns
+        'e.title as event_title',
+        'e.location as event_location',
+        'e.start_time as event_start',
+        'e.end_time as event_end',
+        // ticket type columns
+        'ti.ticket_type',
+        'ti.ticket_price'
+      )
+      .where('t.event_id', Number(eventId))
+      .andWhere('t.code', String(code))
+      .first();
+
+    return row || null;
+  }
   static async save({ code, ownerId, eventId, infoId, paymentId }, trx = null) {
     const q = trx || knex;
     const [id] = await q('tickets').insert({

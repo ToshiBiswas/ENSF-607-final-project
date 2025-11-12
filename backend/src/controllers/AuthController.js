@@ -6,6 +6,7 @@
 
 const { AuthService } = require('../services/AuthService');
 const asyncHandler = require('../utils/handler');
+const { CartService } = require('../services/CartService');
 
 // OOP singleton emitter (transport = WebhookService, payloads = WebhookEnvelope)
 
@@ -18,6 +19,7 @@ class AuthController {
   static register = asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
     const result = await AuthService.register({ name, email, password });
+    CartService.getCart(result.user);
     res.status(201).json(result);
   });
 
