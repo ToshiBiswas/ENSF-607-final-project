@@ -51,6 +51,43 @@ async function mintTicketsWithRetry(trx, { userId, eventId, infoId, paymentId, q
 
 
 class TicketingService {
+  // inside class TicketingService
+
+/**
+ * Validate a 15-digit ticket code for an event.
+ * Only the organizer of the event can validate.
+ * Always returns { response: 'valid'|'invalid', ticket: object|null } — no throws.
+ */
+static async validateTicket({ currentUser, eventId, code }) {
+  const eid = Number(eventId);
+  const clean = String(code || '').trim();
+
+  // basic shape checks
+  if (!Number.isInteger(eid) || eid <= 0) {
+    return { response: 'invalid', ticket: null };
+  }
+  if (!/^\d{15}$/.test(clean)) {
+    return { response: 'invalid', ticket: null };
+  }
+
+  // load event and check organizer ownership
+  const { EventRepo } = require('../repositories/EventRepo');
+  const evt = await EventRepo.findById(eid);
+  if (!evt) return { response: 'invalid', ticket: null };
+
+  // must be authenticated and be the organizer
+  if (!currentUser || evt.organizer?.userId !== currentUser.userId) {
+    return { response: 'invalid', ticket: null };
+  }
+
+  // look up ticket
+  const { TicketMintRepo } = require('../repositories/TicketMintRepo');
+  const ticket = await TicketMintRepo.findByCodeForEvent(eid, clean);
+  if (!ticket) return { response: 'invalid', ticket: null };
+
+  return { response: 'valid', ticket };
+}
+
   /**
    * Add a ticket type to the user cart.
    * Only allows adds if the event is currently within its active window.
