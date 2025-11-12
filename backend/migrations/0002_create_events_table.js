@@ -4,13 +4,12 @@ exports.up = async (knex) => {
     t.increments('event_id').primary();
     t.integer('organizer_id').unsigned().notNullable()
       .references('user_id').inTable('users').onDelete('CASCADE');
-    t.string('title', 200).notNullable();
+    t.string('title', 200).notNullable().unique();
     t.text('description').notNullable();
     t.string('location', 255).notNullable();
     t.dateTime('start_time').notNullable();
     t.dateTime('end_time').notNullable();
     // keep this column as requested
-    t.string('ticket_type', 50).notNullable().defaultTo('general');
     t.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
     t.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
   });

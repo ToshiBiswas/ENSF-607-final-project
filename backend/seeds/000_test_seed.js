@@ -10,8 +10,8 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const bcrypt = require('bcryptjs');
 
+const bcrypt = require('bcryptjs');
 function loadApprovedAccounts() {
   const p = process.env.ACCOUNTS_PATH || path.join(__dirname, 'data', 'accounts.ts');
   const raw = fs.readFileSync(p, 'utf8');
@@ -52,9 +52,7 @@ function loadApprovedAccounts() {
   }
   return accounts;
 }
-
 function last4(num) { return String(num).slice(-4); }
-
 exports.seed = async function(knex) {
   // Wipe (FK-safe order)
   const hasTickets = await knex.schema.hasTable('tickets').catch(() => false);
@@ -147,21 +145,23 @@ exports.seed = async function(knex) {
   const first = approved[0] || null;
   const second = approved[1] || null;
 
-  async function insertPaymentInfo(user_id, acct, primary=false) {
+  async function insertPaymentInfo(user_id, acct) {
     if (!acct) return null;
     const [id] = await knex('paymentinfo').insert({
-      user_id,
       account_id: acct.id,
       name: acct.name,
       last4: last4(acct.number),
       exp_month: acct.exp_month,
       exp_year: acct.exp_year,
       currency: acct.currency || 'CAD',
-      primary_account: !!primary
     });
+    await knex('user_cards').insert({
+      user_id: user_id, 
+      payment_info_id: id
+    })
     return id;
   }
-
+  
   await insertPaymentInfo(avery, first, true);
   await insertPaymentInfo(riley, second, true);
 

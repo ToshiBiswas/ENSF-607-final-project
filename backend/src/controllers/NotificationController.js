@@ -10,7 +10,7 @@ class NotificationController {
    * then returns the list that was sent.
    */
   static getDue = asyncHandler(async (req, res) => {
-    const sent = await NotificationService.deliverDueReminders();
+    const sent = await NotificationService.listForUser(req.user.userId);
     res.json({ sent_count: sent.length, sent });
   });
 
@@ -33,10 +33,10 @@ class NotificationController {
     }
 
     const scheduledAt = send_at ? new Date(send_at) : new Date(evt.startTime);
-    const note = await NotificationService.scheduleReminder({
+    const note = await NotificationService.queue({
       userId: req.user.userId,
       eventId: evt.eventId,
-      reminderType: reminder_type || 'event_start',
+      title: reminder_type || 'event_start',
       message: message || `Reminder: ${evt.title} at ${new Date(evt.startTime).toLocaleString()}`,
       sendAt: scheduledAt
     });
