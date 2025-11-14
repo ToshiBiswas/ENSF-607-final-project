@@ -28,11 +28,13 @@ class EventsController {
     res.status(201).json({ event: evt });
   });
   /**
-   * GET /api/events
+   * GET /api/user/events
    * Returns all events created by the authenticated organizer (no query).
    */
   static listMine = asyncHandler(async (req, res) => {
-    const events = await EventService.listMine(req.user.userId);
+    const organizerId = req.user.userId;
+    console.log(organizerId)
+    const events = await EventService.listMine(organizerId);
     res.json({ events });
   });
 
@@ -63,7 +65,7 @@ class EventsController {
   static remove = asyncHandler(async (req, res) => {
     const organizerId = req.user.userId;
     const { PaymentService } = require('../services/PaymentService');
-    const result = await EventService.deleteEvent(organizerId, Number(req.params.id), PaymentService);
+    const result = await EventService.deleteEvent(organizerId, Number(req.params.id));
     res.json(result);
   });
 

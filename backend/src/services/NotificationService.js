@@ -21,24 +21,6 @@ class NotificationService {
   static async queue(input) {
     return NotificationRepo.insert(input);
   }
-
-  /**
-   * Kept for compatibility; no server-side push in the polling model.
-   * @returns {Promise<void>}
-   */
-  static async deliverToUser(/* user, notification, trxExternal = null */) {
-    // No-op: delivery is handled by client polling GET /api/notifications
-  }
-
-  /**
-   * Kept for compatibility; no batch “deliver” step in the polling model.
-   * @returns {Promise<{delivered:number, mode:string}>}\
-   */
-  static async deliverDue(/* { now = new Date(), limit = 100 } = {} */) {
-    // No-op: nothing to mark as sent; frontend polls to fetch due notifications.
-    return { delivered: 0, mode: 'polling' };
-  }
-
   /**
    * List notifications for a user that are due (send_at <= now).
    * Mirrors NotificationRepo.listForUser.

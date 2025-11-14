@@ -8,6 +8,7 @@ const { knex } = require('../config/db');
 const { Ticket } = require('../domain/Ticket');
 
 class TicketMintRepo {
+
   /**
    * Insert a ticket row.
    * @param {{code:string, ownerId:number, eventId:number, infoId:number, paymentId:number|null}} input
@@ -26,7 +27,7 @@ class TicketMintRepo {
         't.user_id',
         't.event_id',
         't.info_id',
-        't.payment_id',
+        't.purchase_id',
         // event columns
         'e.title as event_title',
         'e.location as event_location',
@@ -49,7 +50,7 @@ class TicketMintRepo {
       user_id: ownerId,
       event_id: eventId,
       info_id: infoId,
-      payment_id: paymentId
+      purchase_id: paymentId
     });
     return new Ticket({
       ticketId: id,
@@ -60,9 +61,12 @@ class TicketMintRepo {
       payment: { paymentId }
     });
   }
-
+  static async findById(ticketId){
+    const r = await knex('tickets').where({ ticket_id: ticketId }).first();
+    return r;
+  }
   /**
-   * List tickets associated with a payment id.
+   * List tickets associated with a payment id. (ubused)
    */
   static async listByPayment(paymentId, trx = null) {
     const q = trx || knex;

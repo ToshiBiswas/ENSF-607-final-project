@@ -86,6 +86,7 @@ class EventRepo {
       tickets: await this.getTickets(row.event_id),
     });
   }
+  
 
   /** Pull ticket type rows for an event */
   static async getTickets(eventId) {

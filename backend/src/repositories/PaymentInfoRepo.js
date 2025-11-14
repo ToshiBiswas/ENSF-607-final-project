@@ -12,7 +12,8 @@ const { AppError } = require('../utils/errors');
 const TABLE = 'paymentinfo';
 
 class PaymentInfoRepo {
-  static async findByAccountId(accountId) {
+  static async  findByAccountId(accountId) {
+ //   console.log(accountId)
     const r = await knex(TABLE).where({ account_id: accountId }).first();
     return r ? this.#shape(r) : null;
   }
@@ -22,13 +23,14 @@ class PaymentInfoRepo {
     return r ? this.#shape(r) : null;
   }
 
-  static async insertCard({ account }) {
+  static async insertCard( account ) {
     // Ensure we don’t duplicate cards globally
-    const existing = await knex(TABLE).where({ account_id: account.id }).first();
+//    console.log(account)
+    const existing = await knex(TABLE).where({ account_id: account.account_id }).first();
     if (existing) return this.#shape(existing);
 
     const [id] = await knex(TABLE).insert({
-      account_id: account.id,
+      account_id: account.account_id,
       name: account.name,
       last4: String(account.last4).slice(-4),
       exp_month: account.exp_month,
