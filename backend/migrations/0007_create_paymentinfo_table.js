@@ -7,8 +7,6 @@ exports.up = async function up(knex) {
 
     // Stable, non-PII identifier for a card (e.g., hashed PAN or provider id)
     t.string('account_id', 64).notNullable();
-    t.unique(['account_id'], 'paymentinfo_account_id_unique');
-
     // Display fields (non-sensitive)
     t.string('name', 120).notNullable();
     t.string('last4', 4).notNullable();
