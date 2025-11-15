@@ -7,6 +7,8 @@ const TABLE = 'user_cards';
 
 class UserCardRepo {
   static async isLinked(userId, paymentInfoId) {
+    console.log(userId)
+    console.log(paymentInfoId)
     const r = await knex(TABLE).where({ user_id: userId, payment_info_id: paymentInfoId }).first();
     return !!r;
   }
@@ -30,6 +32,7 @@ class UserCardRepo {
 
   // Helpful for listing a user's saved cards
   static async listForUser(userId) {
+    console.log(userId)
     return knex('user_cards as uc')
       .join('paymentinfo as pi', 'pi.payment_info_id', 'uc.payment_info_id')
       .where('uc.user_id', userId)

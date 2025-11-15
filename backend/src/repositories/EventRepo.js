@@ -86,6 +86,7 @@ class EventRepo {
       tickets: await this.getTickets(row.event_id),
     });
   }
+  
 
   /** Pull ticket type rows for an event */
   static async getTickets(eventId) {
@@ -100,6 +101,12 @@ class EventRepo {
         left: r.tickets_left,
       })
     );
+  }
+  static async listByOrganizer(organizerId) {
+    const rows = await knex('events')
+      .where({ organizer_id: organizerId })
+      .orderBy('event_id', 'desc'); // safe ordering if created_at not present
+    return Promise.all(rows.map(r => this.toDomain(r)));
   }
 
   /** Pull categories for an event */
@@ -141,7 +148,6 @@ class EventRepo {
     location,
     startTime,
     endTime,
-    ticketType,
   }) {
     const [event_id] = await knex('events').insert({
       organizer_id: organizerId,
@@ -149,8 +155,7 @@ class EventRepo {
       description,
       location,
       start_time: new Date(startTime),
-      end_time: new Date(endTime),
-      ticket_type: ticketType || 'general',
+      end_time: new Date(endTime)
     });
     return this.findById(event_id);
   }

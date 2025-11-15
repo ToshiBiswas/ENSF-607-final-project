@@ -4,37 +4,52 @@
  */
 // src/repositories/PaymentRepo.js
 const { knex } = require('../config/db');
-const TABLE = 'payments';
-
+const PAYMENTS = 'payments';
+const REFUNDS = 'refunds'
+const PURCHASES = 'purchases' 
 class PaymentRepo {
-  static async insert(payload) {
-    const [id] = await knex(TABLE).insert({
+  static async insertPayment(payload) {
+    const [id] = await knex(PAYMENTS).insert({
       user_id: payload.userId,
-      event_id: payload.eventId,
-      ticket_info_id: payload.ticketInfoId,
       payment_info_id: payload.paymentInfoId,
-      amount_cents: payload.amountCents,
-      currency: payload.currency,
-      provider_payment_id: payload.providerPaymentId,
-      idempotency_key: payload.idempotencyKey,
-      status: payload.status,
+      amount_cents: payload.amountCents
     });
     return this.findById(id);
   }
-
   static async findById(paymentId) {
-    return knex(TABLE).where({ payment_id: paymentId }).first();
-  }
+    return knex(PAYMENTS).where({ payment_id: paymentId }).first();
 
+  }
+  static async getTicketPurchases(event_id){
+    const purchase = knex(PURCHASE).where({event_id}).first()
+    return this.findById(purchase.payment_info_id);
+
+  }
+  static async findByPurchaseId(purchase_id) {
+    return knex(PURCHASES).where({ purchase_id }).first();
+
+  }
+  static async insertPurchase(payment_id, ticket_id, amount_cents) {
+    const [id] = await knex(PURCHASES).insert({
+      payment_id,
+      ticket_id,
+      amount_cents
+    });
+    return this.findByPurchaseId(id);
+  }
   static async listApprovedForEvent(eventId) {
-    return knex(TABLE)
+     const p = await knex(PURCHASES)
       .where({ event_id: eventId, status: 'approved' })
-      .orderBy('payment_id', 'asc');
+      .orderBy('purchase_id', 'asc');
+    p[payment] = this.findById(paymentId);
   }
 
-  static async updateStatus(_unused, paymentId, status, extras = {}) {
-    // _unused keeps call sites compatible; we ignore any trx argument now
-    await knex(TABLE).where({ payment_id: paymentId }).update({ status, ...extras });
+  static async refund(userId, paymentId, amountCents) {
+    const [id] = await knex(REFUNDS).insert({
+      user_id: userId,
+      payment_id: paymentId,
+      amount_cents: amountCents,
+    });
   }
 
   static async listForUser(userId, query = {}) {

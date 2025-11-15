@@ -27,6 +27,7 @@ r.post('/events', requireAuth, EventsController.create);
 r.patch('/events/:id', requireAuth, EventsController.update);
 r.delete('/events/:id', requireAuth, EventsController.remove);
 r.get('/events/:id/tickets', EventsController.ticketTypes);
+r.get('/user/events', requireAuth, EventsController.listMine);
 /* ---------- CATEGORIES---------- */
 r.get('/categories',CategoryController.categories)
 

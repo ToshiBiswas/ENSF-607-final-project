@@ -13,14 +13,14 @@ exports.up = async (knex) => {
     t.integer('info_id').unsigned().notNullable()
       .references('info_id').inTable('ticketinfo').onDelete('CASCADE');
 
-    t.integer('payment_id').unsigned().notNullable()
-      .references('payment_id').inTable('payments').onDelete('CASCADE');
+    t.integer('purchase_id').unsigned().notNullable()
+      .references('purchase_id').inTable('purchases').onDelete('CASCADE');
 
     t.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
 
     t.index(['user_id']);
     t.index(['event_id']);
-    t.index(['payment_id']);
+    t.index(['purchase_id']);
   });
 };
 

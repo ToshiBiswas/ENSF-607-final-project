@@ -1,5 +1,6 @@
 // backend/src/controllers/tickets.controller.js
 const TicketService = require('../services/TicketingService');
+const asyncHandler = require('../utils/handler');
 
 class TicketsController {
   // GET /api/tickets  (authenticated user’s tickets)
@@ -16,25 +17,17 @@ class TicketsController {
     res.json({ message: 'Get ticket: successful', data });
   }
 
-  //  POST /api/tickets  
-  static async createTicket(req, res) {
-    const data = await TicketService.createTicket(req.user, req.body);
-    res.status(201).json({ message: 'Ticket created', data });
-  }
-
-  // PUT /api/tickets/:id  
-  static async updateTicket(req, res) {
-    const id = Number(req.params.id);
-    await TicketService.updateTicket(req.user, id, req.body);
-    res.json({ message: 'Ticket updated' });
-  }
-
-  //  DELETE /api/tickets/:id  
-  static async deleteTicket(req, res) {
-    const id = Number(req.params.id);
-    const result = await TicketService.deleteTicket(req.user, id);
-    res.json({ message: 'Ticket deleted', ...result });
-  }
+  /** GET /api/events/:eventId/tickets/validate?code=... (auth required) */
+  static validateForEvent = asyncHandler(async (req, res) => {
+    const eventId = req.params.eventId;
+    const code = req.query.code ?? req.body?.code ?? '';
+    const result = await TicketingService.validateTicket({
+      currentUser: req.user,   // <-- ensure we pass the caller
+      eventId,
+      code
+    });
+    res.json(result); // always 200 with {response, ticket}
+  });
 }
 
 module.exports = TicketsController;

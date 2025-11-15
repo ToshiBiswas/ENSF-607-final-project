@@ -9,8 +9,8 @@ exports.up = async (knex) => {
     t.string('location', 255).notNullable();
     t.dateTime('start_time').notNullable();
     t.dateTime('end_time').notNullable();
+    t.boolean('deleted').notNullable.defaultTo(false);
     // keep this column as requested
-    t.string('ticket_type', 50).notNullable().defaultTo('general');
     t.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
     t.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
   });

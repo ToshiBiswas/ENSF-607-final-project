@@ -3,7 +3,9 @@
 
 const { AppError } = require('../utils/errors');
 const { EventRepo } = require('../repositories/EventRepo');
-
+const { PaymentService } = require('./PaymentService')
+const { PaymentRepo } = require('../repositories/PaymentRepo')
+const {NotificationService} = require("./NotificationService")
 /** Normalize/validate title once */
 function normalizeTitle(title) {
   const t = String(title ?? '').trim();
@@ -49,6 +51,13 @@ class EventService {
    * - Enforces unique title (case-insensitive)
    * - Attaches categories and upserts ticket infos
    */
+  static async listMine(organizerId) {
+    const id = Number(organizerId);
+    if (!Number.isInteger(id) || id <= 0) {
+      throw new AppError('Invalid organizer id', 400, { code: 'BAD_ORGANIZER_ID' });
+    }
+    return EventRepo.listByOrganizer(id);
+  }
   static async createEvent(
     organizerId,
     { title, description, location, startTime, endTime, ticketType = 'general', categories = [], ticketInfos = [] }
@@ -70,8 +79,7 @@ class EventService {
       description,
       location,
       startTime,
-      endTime,
-      ticketType
+      endTime
     });
 
     if (categoryIds.length) {
@@ -81,7 +89,7 @@ class EventService {
     if (Array.isArray(ticketInfos) && ticketInfos.length) {
       await EventRepo.upsertTicketInfos(evt.eventId, ticketInfos);
     }
-
+    
     return EventRepo.findById(evt.eventId);
   }
     /**
@@ -103,9 +111,10 @@ class EventService {
         value
       });
     }
+    events = EventRepo.findByCategoryValue(value);
 
     // Return hydrated Event domain objects for that category
-    return EventRepo.findByCategoryValue(value);
+    return events
   }
 
 
@@ -163,7 +172,7 @@ class EventService {
    *  - Notify all purchasers + organizer via NotificationService
    *  - Finally remove the event
    */
-  static async deleteEvent(organizerId, eventId, paymentServiceArg) {
+  static async deleteEvent(organizerId, eventId) {
     const id = Number(eventId);
     if (!Number.isInteger(id) || id <= 0) {
       throw new AppError('Invalid event id', 400, { code: 'BAD_EVENT_ID' });
@@ -172,51 +181,32 @@ class EventService {
     const evt = await EventRepo.findById(id);
     if (!evt) throw new AppError('Event not found', 404, { code: 'EVENT_NOT_FOUND' });
     if (evt.organizer.userId !== organizerId) throw new AppError('Forbidden', 403, { code: 'FORBIDDEN' });
-
-    const paymentService = paymentServiceArg || require('./PaymentService').PaymentService;
+    if(!evt.purchasable()){
+      throw new AppError('Event Refund Date Passed', 400, { code: 'PAST_DELETE_PERIOD' });
+    }
 
     // Gather all successful payments to refund
     const approved = await PaymentRepo.listApprovedForEvent(id);
-
+    
     for (const p of approved) {
       try {
-        await paymentService.refund(p.paymentId, p.amountCents, `event-${id}-canceled`);
+        await PaymentService.refund(p);
         // notify purchaser about refund
-        if (typeof NotificationService?.create === 'function') {
-          await NotificationService.create({
-            userId: p.user.userId,
+          await NotificationService.queue({
+            userId: p.payment.userId,
             title: 'refund_issued',
-            message: `Event canceled. Your payment ${p.paymentId} was refunded.`,
+            message: `Event canceled. Your payment ${p.purchase_id} was refunded.`,
             eventId: id
-          });
-        } else if (typeof NotificationService?.notify === 'function') {
-          await NotificationService.notify({
-            userId: p.user.userId,
-            type: 'refund_issued',
-            message: `Event canceled. Your payment ${p.paymentId} was refunded.`,
-            eventId: id,
-            paymentId: p.paymentId
-          });
-        }
+          })
       } catch (e) {
-        console.warn('Refund failed', p.paymentId, e?.message || e);
+        console.warn('Refund failed', p.purchase_id, e?.message || e);
         // optional failure notice
-        if (typeof NotificationService?.create === 'function') {
-          await NotificationService.create({
-            userId: p.user.userId,
+          await NotificationService.queue({
+            userId: p.payment.userId,
             title: 'refund_failed',
-            message: `We could not refund payment ${p.paymentId}. Support has been notified.`,
+            message: `The refund could not be processed.`,
             eventId: id
-          });
-        } else if (typeof NotificationService?.notify === 'function') {
-          await NotificationService.notify({
-            userId: p.user.userId,
-            type: 'refund_failed',
-            message: `We could not refund payment ${p.paymentId}.`,
-            eventId: id,
-            paymentId: p.paymentId
-          });
-        }
+          })
       }
     }
 

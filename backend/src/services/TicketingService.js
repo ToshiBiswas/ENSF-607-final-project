@@ -15,6 +15,9 @@ const { EventRepo } = require('../repositories/EventRepo');
 const { TicketMintRepo } = require('../repositories/TicketMintRepo');
 const { NotificationService } = require('./NotificationService');
 const { CartService } = require("./CartService")
+const { MockPaymentProcessor } = require("./MockPaymentProcessor")
+const { PaymentRepo } = require('../repositories/PaymentRepo');
+
 /** Generate a 6-digit code. Probability of collision is low; DB unique index prevents duplicates when table exists. */
 function generateTicketCode() {
   // 15-digit numeric code using crypto.randomInt to reduce collisions
@@ -27,7 +30,7 @@ function generateTicketCode() {
 
 
 // Retry-mint helper to avoid duplicate ticket codes (MySQL ER_DUP_ENTRY 1062)
-async function mintTicketsWithRetry(trx, { userId, eventId, infoId, paymentId, qty, maxAttempts = 5 }) {
+async function mintTicketsWithRetry(trx, { userId, eventId, infoId, purchaseId, qty, maxAttempts = 5 }) {
   const minted = [];
   for (let i = 0; i < qty; i++) {
     let attempts = 0;
@@ -35,7 +38,7 @@ async function mintTicketsWithRetry(trx, { userId, eventId, infoId, paymentId, q
       attempts += 1;
       const code = generateTicketCode();
       try {
-        const t = await TicketMintRepo.save({ code, ownerId: userId, eventId, infoId, paymentId }, trx);
+        const t = await TicketMintRepo.save({ code, ownerId: userId, eventId, infoId, purchaseId }, trx);
         minted.push(t);
         break;
       } catch (e) {
@@ -51,6 +54,43 @@ async function mintTicketsWithRetry(trx, { userId, eventId, infoId, paymentId, q
 
 
 class TicketingService {
+  // inside class TicketingService
+
+/**
+ * Validate a 15-digit ticket code for an event.
+ * Only the organizer of the event can validate.
+ * Always returns { response: 'valid'|'invalid', ticket: object|null } — no throws.
+ */
+static async validateTicket({ currentUser, eventId, code }) {
+  const eid = Number(eventId);
+  const clean = String(code || '').trim();
+
+  // basic shape checks
+  if (!Number.isInteger(eid) || eid <= 0) {
+    return { response: 'invalid', ticket: null };
+  }
+  if (!/^\d{15}$/.test(clean)) {
+    return { response: 'invalid', ticket: null };
+  }
+
+  // load event and check organizer ownership
+  const { EventRepo } = require('../repositories/EventRepo');
+  const evt = await EventRepo.findById(eid);
+  if (!evt) return { response: 'invalid', ticket: null };
+
+  // must be authenticated and be the organizer
+  if (!currentUser || evt.organizer?.userId !== currentUser.userId) {
+    return { response: 'invalid', ticket: null };
+  }
+
+  // look up ticket
+  const { TicketMintRepo } = require('../repositories/TicketMintRepo');
+  const ticket = await TicketMintRepo.findByCodeForEvent(eid, clean);
+  if (!ticket) return { response: 'invalid', ticket: null };
+
+  return { response: 'valid', ticket };
+}
+
   /**
    * Add a ticket type to the user cart.
    * Only allows adds if the event is currently within its active window.
@@ -103,19 +143,40 @@ class TicketingService {
     if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) throw new AppError('Cart is empty', 400);
 
     const paymentService = require('./PaymentService').PaymentService;
-
+    let ccv = null;
     // Pick payment method: saved card or verify+store new card
     let pinfo = null;
     if (usePaymentInfoId) {
-      const { PaymentInfoRepo } = require('../repositories/PaymentInfoRepo');
-      pinfo = await PaymentInfoRepo.findById(usePaymentInfoId);
+      if(usePaymentInfoId.id){
+        const { PaymentInfoRepo } = require('../repositories/PaymentInfoRepo');
+        pinfo = await PaymentInfoRepo.findById(usePaymentInfoId.id);
+      }else{
+        throw new AppError('Provide an existing account ID', 400);
+      }
+      if(usePaymentInfoId.ccv){
+        ccv = usePaymentInfoId.ccv;
+      }else{
+        throw new AppError('ccv not provided.', 400);
+      }
+      
       if (!pinfo || pinfo.owner.userId !== user.userId) throw new AppError('Payment method not found', 404);
     } else if (newCard) {
       pinfo = await paymentService.verifyAndStore(user.userId, newCard);
+      ccv = newCard.ccv
     } else {
       throw new AppError('No payment method provided', 400);
     }
-
+    MockPaymentProcessor.purchase({
+      accountId :pinfo.accountId,
+      ccv,
+      amountCents: cart.totalCents()
+    });
+    const payment = await require('./PaymentService').PaymentService.chargeAndRecord({
+      userId: user.userId,
+      paymentInfo: pinfo,
+      amountCents: cart.totalCents()
+,
+    });
     const minted = [];
     // Single encompassing transaction: ensures stock decrement + payment record stay consistent
     await knex.transaction(async (trx) => {
@@ -132,18 +193,6 @@ class TicketingService {
         }
 
         // Compute total for this cart line
-        const amountCents = Math.round(Number(locked.row.ticket_price) * 100) * item.quantity;
-
-        // Provider charge + local Payment row
-        const payment = await require('./PaymentService').PaymentService.chargeAndRecord({
-          userId: user.userId,
-          eventId: locked.row.event_id,
-          ticketInfoId: locked.row.info_id,
-          paymentInfo: pinfo,
-          amountCents,
-          currency: 'CAD',
-          idempotencyKey: `user${user.userId}-info${locked.row.info_id}-ts${Date.now()}`
-        });
 
         // Decrement stock atomically
         await TicketInfoRepo.decrementLeft(trx, locked.row.info_id, item.quantity);
@@ -155,7 +204,9 @@ class TicketingService {
           qty: item.quantity
         });
         minted.push(...mintedBatch);
-
+        for (const m in mintedBatch){
+          PaymentRepo.insertPurchase(payment.payment_id,m.code,item.unit_price_cents);
+        }
       // Notify purchaser (webhook + DB)
       await NotificationService.queue({
         userId: user.userId,
@@ -169,7 +220,7 @@ class TicketingService {
 
     // Clear cart OUTSIDE the transaction
     CartService.clear();
-    return { tickets: minted.map(t => t.code) };
+    return { tickets: minted.map(t => this.getTicketById(user,)) };
   }
   static async createTicket(user, body) {
     if (!user?.id) {
