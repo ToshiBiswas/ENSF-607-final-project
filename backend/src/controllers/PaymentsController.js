@@ -19,6 +19,12 @@ class PaymentsController {
     const ok = await PaymentService.refund(Number(payment_id), Number(amount_cents), `refund-${payment_id}-${Date.now()}`);
     res.json({ refunded: ok });
   });
+  /** GET /api/payments/history */
+  static getHistory = asyncHandler(async (req, res) => {
+    const { PaymentRepo } = require('../repositories/PaymentRepo');
+    const result = await PaymentRepo.listForUser(req.user.userId, req.query);
+    res.json({ message: 'Get payment history: successful', ...result });
+  });
 }
 
 module.exports = { PaymentsController };

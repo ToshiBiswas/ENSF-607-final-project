@@ -4,6 +4,7 @@
  */
 const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
+const ticketsRoutes = require('./tickets.routes');
 
 const { AuthController } = require('../controllers/AuthController');
 const { EventsController } = require('../controllers/EventsController');
@@ -45,6 +46,10 @@ r.post('/cart/checkout', requireAuth, CartController.checkout);
 /* ---------- PAYMENTS ---------- */
 r.post('/payments/verify-card', requireAuth, PaymentsController.verifyCard);
 r.post('/payments/refund', requireAuth, PaymentsController.refund);
+r.get('/payments/history', requireAuth, PaymentsController.getHistory);
+
+/* ---------- TICKETS ---------- */
+r.use('/tickets', ticketsRoutes);
 
 /* ---------- NOTIFICATIONS ---------- */
 // Processes and sends all pending notifications due as of "now"

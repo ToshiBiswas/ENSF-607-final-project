@@ -118,6 +118,11 @@ class EventRepo {
     return row ? this.toDomain(row) : null;
   }
 
+  static async findDetailedById(eventId) {
+    const row = await knex('events').where({ event_id: eventId }).first();
+    return row ? this.toDomain(row) : null;
+  }
+
   /** List events matching a category value */
   static async findByCategoryValue(value) {
     const rows = await knex('events as e')
