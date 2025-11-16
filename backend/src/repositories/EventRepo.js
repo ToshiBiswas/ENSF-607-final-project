@@ -35,7 +35,7 @@ function normTicketRow(ti) {
 }
 class EventRepo {
   /** Hydrate an Event domain object with organizer, categories, and ticket infos */
-  static async upsertTicketInfos(eventId, ticketInfos) {
+  static async  upsertTicketInfos(eventId, ticketInfos) {
     if (!Array.isArray(ticketInfos) || ticketInfos.length === 0) return;
 
     for (const raw of ticketInfos) {
@@ -70,31 +70,31 @@ class EventRepo {
       }
     }
   }
-  static async toDomain(row) {
-    const organizer = await UserRepo.findById(row.organizer_id);
+static async toDomain(row) {
+  const organizer = await UserRepo.findById(row.organizer_id);
 
-    return new Event({
-      eventId: row.event_id,
-      organizer,
-      title: row.title,
-      description: row.description,
-      location: row.location,
-      startTime: row.start_time ? new Date(row.start_time) : null,
-      endTime: row.end_time ? new Date(row.end_time) : null,
-      ticketType: row.ticket_type,
-      categories: await this.getCategories(row.event_id),
-      tickets: await this.getTickets(row.event_id),
-    });
-  }
+  return new Event({
+    eventId: row.event_id,
+    organizer,
+    title: row.title,
+    description: row.description,
+    location: row.location,
+    startTime: row.start_time ? new Date(row.start_time) : null,
+    endTime: row.end_time ? new Date(row.end_time) : null,
+    ticketType: row.ticket_type,
+    categories: await this.getCategories(row.event_id),
+    tickets: await this.getTickets(row.event_id,row.title),
+  });
+}
   
 
   /** Pull ticket type rows for an event */
-  static async getTickets(eventId) {
+  static async getTickets(eventId,title) {
     const rows = await knex('ticketinfo').where({ event_id: eventId });
     return rows.map((r) =>
       new TicketInfo({
         infoId: r.info_id,
-        event: null,
+        event: title,
         type: r.ticket_type,
         price: r.ticket_price,
         quantity: r.tickets_quantity,
@@ -143,6 +143,7 @@ class EventRepo {
     location,
     startTime,
     endTime,
+    paymentInfoId,   // <- NEW
   }) {
     const [event_id] = await knex('events').insert({
       organizer_id: organizerId,
@@ -150,10 +151,12 @@ class EventRepo {
       description,
       location,
       start_time: new Date(startTime),
-      end_time: new Date(endTime)
+      end_time: new Date(endTime),
+      payment_info_id: paymentInfoId,   // <- NEW
     });
     return this.findById(event_id);
   }
+
 
   /** Attach category IDs for an event (idempotent via upsert/ignore) */
   static async attachCategories(eventId, categoryIds) {
@@ -197,6 +200,27 @@ class EventRepo {
           });
       }
     }
+  }
+ /**
+   * Delete all events whose end_time is in the past.
+   * Uses deleteEvent(eventId), so related ticketinfo + tickets are deleted too.
+   *
+   * @returns {Promise<number>} number of events deleted
+   */
+  static async deleteExpiredEvents() {
+    const rows = await knex('events')
+      .whereNotNull('end_time')
+      .andWhere('end_time', '<=', knex.fn.now())
+      .select('event_id');
+
+    const ids = rows.map(r => r.event_id);
+    if (ids.length === 0) return 0;
+
+    for (const id of ids) {
+      await this.deleteEvent(id);
+    }
+
+    return ids.length;
   }
 
   /** Hard delete an event (cascade behaviour relies on FKs) */

@@ -96,7 +96,7 @@ exports.seed = async function (knex) {
       currency,
     };
   });
-
+  
   await knex.transaction(async (trx) => {
     await trx('payment_accounts').del();
     await trx.batchInsert('payment_accounts', rows, 100);

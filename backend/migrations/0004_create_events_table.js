@@ -4,6 +4,8 @@ exports.up = async (knex) => {
     t.increments('event_id').primary();
     t.integer('organizer_id').unsigned().notNullable()
       .references('user_id').inTable('users').onDelete('CASCADE');
+    t.integer('payment_info_id').unsigned().nullable()
+      .references('payment_info_id').inTable('paymentinfo').onDelete('SET NULL');
     t.string('title', 200).notNullable().unique();
     t.text('description').notNullable();
     t.string('location', 255).notNullable();

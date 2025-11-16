@@ -5,6 +5,7 @@
  */
 const { knex } = require('../config/db');
 const { CartRepo } = require('../repositories/CartRepo');
+const { AppError } = require('../utils/errors');
 
 class DBCart {
   constructor({ owner, cartRow, items }) {

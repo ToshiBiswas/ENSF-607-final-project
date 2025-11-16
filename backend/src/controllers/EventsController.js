@@ -24,7 +24,8 @@ class EventsController {
   static create = asyncHandler(async (req, res) => {
     const organizerId = req.user.userId;
     const payload = req.body; // {title, description, location, startTime, endTime, ticketType, categories[], ticketInfos[]}
-    const evt = await EventService.createEvent(organizerId, payload);
+    let evt = await EventService.createEvent(organizerId, payload);
+    evt.organizer = evt.organizer.name
     res.status(201).json({ event: evt });
   });
   /**
@@ -43,8 +44,9 @@ class EventsController {
    * Return a single event by id.
    */
   static get = asyncHandler(async (req, res) => {
-    const evt = await EventRepo.findById(Number(req.params.id));
+    let evt = await EventRepo.findById(Number(req.params.id));
     if (!evt) return res.status(404).json({ error: 'Not found' });
+    evt.organizer = evt.organizer.name
     res.json({ event: evt });
   });
 

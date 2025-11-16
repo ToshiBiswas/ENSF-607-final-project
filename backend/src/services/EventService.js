@@ -6,6 +6,9 @@ const { EventRepo } = require('../repositories/EventRepo');
 const { PaymentService } = require('./PaymentService')
 const { PaymentRepo } = require('../repositories/PaymentRepo')
 const {NotificationService} = require("./NotificationService")
+const {CategoryRepo} = require('../repositories/CategoryRepo')
+const { UserCardRepo } = require('../repositories/UserCardRepo');
+
 /** Normalize/validate title once */
 function normalizeTitle(title) {
   const t = String(title ?? '').trim();
@@ -60,26 +63,85 @@ class EventService {
   }
   static async createEvent(
     organizerId,
-    { title, description, location, startTime, endTime, ticketType = 'general', categories = [], ticketInfos = [] }
+    {
+      title,
+      description,
+      location,
+      startTime,
+      endTime,
+      ticketType = 'general',
+      categories = [],
+      ticketInfos = [],
+      payment,       // { paymentInfoId?: number, newCard?: { number, name, ccv, exp_month, exp_year } }
+    } = {}
   ) {
     const normTitle = normalizeTitle(title);
 
-    // Unique (CI)
-    if (await EventRepo.existsTitleCI(normTitle)) {
-      throw new AppError('An event with this title already exists', 409, { code: 'DUPLICATE_TITLE' });
+    // Basic required fields
+    if (!normTitle || !location || !startTime || !endTime) {
+      throw new AppError('Missing required fields', 400, {
+        code: 'BAD_EVENT_FIELDS',
+      });
     }
 
-    // Strict category IDs
+    // Unique (CI) by title
+    if (await EventRepo.existsTitleCI(normTitle)) {
+      throw new AppError('An event with this title already exists', 409, {
+        code: 'DUPLICATE_TITLE',
+      });
+    }
+
+    // ------------------------------
+    // Resolve / require payment method
+    // ------------------------------
+    const { existingCard, newCard } = payment || {};
+    let resolvedPaymentInfoId;
+
+    if (existingCard != null) {
+      // Use existing saved payment method
+      const pid = Number(existingCard);
+      if (!Number.isInteger(pid) || pid <= 0) {
+        throw new AppError('Invalid paymentInfoId', 400, {
+          code: 'BAD_PAYMENT_INFO_ID',
+        });
+      }
+
+      const linked = await UserCardRepo.isLinked(organizerId, pid);
+      if (!linked) {
+        throw new AppError('Payment method not found', 404, {
+          code: 'PAYMENT_METHOD_NOT_FOUND',
+          userId: organizerId,
+          paymentInfoId: pid,
+        });
+      }
+
+      resolvedPaymentInfoId = pid;
+    } else if (newCard) {
+      // Create + store a new card for this organizer, then use it
+      const { PaymentService } = require('./PaymentService');
+      const stored = await PaymentService.verifyAndStore(organizerId, newCard);
+      resolvedPaymentInfoId = stored.paymentInfoId;
+    } else {
+      // No payment method given at all
+      throw new AppError('payment method is required', 400, {
+        code: 'PAYMENT_INFO_REQUIRED',
+      });
+    }
+
+    // ------------------------------
+    // Categories & tickets
+    // ------------------------------
     const categoryIds = await resolveCategoryIdsStrict(categories);
 
-    // Insert + attach + ticket infos
+    // Insert event with its single paymentInfoId
     const evt = await EventRepo.insert({
       organizerId,
       title: normTitle,
       description,
       location,
       startTime,
-      endTime
+      endTime,
+      paymentInfoId: resolvedPaymentInfoId,
     });
 
     if (categoryIds.length) {
@@ -89,10 +151,10 @@ class EventService {
     if (Array.isArray(ticketInfos) && ticketInfos.length) {
       await EventRepo.upsertTicketInfos(evt.eventId, ticketInfos);
     }
-    
+
     return EventRepo.findById(evt.eventId);
-  }
-    /**
+  }    
+  /**
    * List events for a given category value (must exist in categories table).
    * @param {string} categoryValue
    * @returns {Promise<Event[]>}
@@ -102,7 +164,6 @@ class EventService {
     if (!value) {
       throw new AppError('category is required', 400, { code: 'CATEGORY_REQUIRED' });
     }
-
     // Ensure the category exists (no auto-create)
     const rows = await EventRepo.getCategoriesByValues([value]);
     if (!rows.length) {
@@ -111,7 +172,7 @@ class EventService {
         value
       });
     }
-    events = EventRepo.findByCategoryValue(value);
+    const events = EventRepo.findByCategoryValue(value);
 
     // Return hydrated Event domain objects for that category
     return events
@@ -196,7 +257,7 @@ class EventService {
             userId: p.payment.userId,
             title: 'refund_issued',
             message: `Event canceled. Your payment ${p.purchase_id} was refunded.`,
-            eventId: id
+            eventId: id           
           })
       } catch (e) {
         console.warn('Refund failed', p.purchase_id, e?.message || e);
