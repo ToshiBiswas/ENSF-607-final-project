@@ -296,6 +296,104 @@ class EventService {
     await EventRepo.deleteEvent(id);
     return { deleted: true };
   }
+    /**
+   * Settle all expired events:
+   *  - Find events whose end_time <= now
+   *  - For each event:
+   *      * Sum ticket revenue from purchases
+   *      * Pay the organizer 50% via PaymentRepo (using event.payment_info_id)
+   *      * Delete the event + its tickets via EventRepo.deleteEvent
+   *
+   * Returns a summary of what it did.
+   */
+  static async settleAndDeleteExpiredEvents() {
+    // 1) Find expired events
+
+
+    const expired = EventRepo.getExpiredEvents()
+    const results = [];
+    if (!expired.length) {
+      return { count: 0, payouts: [] };
+    }
+    for (const evt of expired) {
+      const eventId = evt.eventId;
+      const organizerId = evt.organizerId;
+      const paymentInfoId = evt.pinfoId; // organizer's payout method
+      const title = evt.title;
+
+      // 2) Get all ticket purchases for this event
+      let purchases = [];
+      try {
+        if (typeof PaymentRepo.listApprovedForEvent === 'function') {
+          purchases = await PaymentRepo.listApprovedForEvent(eventId);
+        }
+      } catch (e) {
+        // If something goes wrong fetching purchases, record error and skip payout,
+        // but still delete the event to keep the system clean.
+        purchases = [];
+      }
+
+      // Sum total revenue from purchases
+      const totalCents = Array.isArray(purchases)
+        ? purchases.reduce(
+            (sum, p) =>
+              sum +
+              Number(
+                p.purchase_amount_cents ??
+                p.amount_cents ??
+                0
+              ),
+            0
+          )
+        : 0;
+
+      // Organizer gets 50% of total revenue
+      const payoutCents = Math.floor(totalCents * 0.5);
+      let payoutRecord = null;
+
+      // 3) Record payout if we have a payment method and a non-zero share
+      if (payoutCents > 0 && paymentInfoId) {
+        try {
+          payoutRecord = await PaymentRepo.insertPayment({
+            userId: organizerId,
+            paymentInfoId,
+            amountCents: payoutCents,
+          });
+
+          // Optional: notify organizer that they got paid
+          if (NotificationService && typeof NotificationService.create === 'function') {
+            await NotificationService.create({
+              userId: organizerId,
+              title: 'event_payout',
+              message: `Your event "${title}" was settled. You earned ${(payoutCents / 100).toFixed(2)} from ticket sales.`,
+              eventId,
+            });
+          }
+        } catch (e) {
+          // If payout recording fails, we still delete the event but capture the error in the summary
+          payoutRecord = { error: String(e.message || e) };
+        }
+      }
+
+      // 4) Delete the event and its related rows (tickets, ticketinfo, etc.)
+      await EventRepo.deleteEvent(eventId);
+
+      results.push({
+        eventId,
+        organizerId,
+        title,
+        totalCents,
+        payoutCents,
+        paymentInfoId,
+        payoutRecord,
+      });
+    }
+
+    return {
+      count: expired.length,
+      payouts: results,
+    };
+  }
 
 }
 

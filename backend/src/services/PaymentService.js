@@ -6,7 +6,7 @@ const { PaymentInfoRepo } = require('../repositories/PaymentInfoRepo');
 const { UserCardRepo } = require('../repositories/UserCardRepo');
 const { PaymentRepo } = require('../repositories/PaymentRepo');
 const { MockPaymentProcessor } = require('./MockPaymentProcessor');
-
+const { knex } = require('../config/db');
 /**
  * PaymentService
  *
@@ -256,8 +256,10 @@ class PaymentService {
         const usedInPayments = await trx('payments')
           .where({ payment_info_id: pid })
           .first();
-
-        if (!usedInPayments) {
+        const usedInEvents = await trx('events')
+          .where({payment_info_id: pid})
+          .first()
+        if (!(usedInPayments || usedInEvents)) {
           await trx('paymentinfo')
             .where({ payment_info_id: pid })
             .del();

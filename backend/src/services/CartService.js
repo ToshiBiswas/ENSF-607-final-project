@@ -6,7 +6,7 @@
 const { knex } = require('../config/db');
 const { CartRepo } = require('../repositories/CartRepo');
 const { AppError } = require('../utils/errors');
-
+const { EventRepo } = require("../repositories/EventRepo")
 class DBCart {
   constructor({ owner, cartRow, items }) {
     this.owner = owner;        // { userId }
@@ -109,6 +109,15 @@ class CartService {
     return knex.transaction(async (trx) => {
       const cartRow = await CartRepo.getOrCreateCartForUser(user.userId, trx);
       const items   = await CartRepo.getItems(cartRow.cart_id, trx);
+      let itemsNew = [];
+      for(i in items){
+        const event = EventRepo.findById(i.event_id)
+        if(event.purchasable()){
+          itemsNew.push(i)
+        }else{
+          CartRepo.removeItem(cartRow.cart_id, i.info_id,trx)
+        }
+      }
       return new DBCart({ owner: user, cartRow, items });
     });
   }

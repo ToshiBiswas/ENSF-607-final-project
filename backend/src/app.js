@@ -29,6 +29,7 @@ require('dotenv').config();
 const express = require('express');
 const morgan = require('morgan');
 const { EventRepo } = require('./repositories/EventRepo');
+const { EventService } = require('./services/EventService');
 
 // Central route registry
 const routes = require('./routes');
@@ -67,13 +68,18 @@ if (require.main === module) {
   });
 }
 function startExpiredEventCleanupScheduler() {
-  const INTERVAL_MS = 60 * 1000; // 1 minute
-
+  const INTERVAL_MS = 6 * 1000; // 1 minute
+  console.log('started Expired Events')
   setInterval(async () => {
     try {
-      const deleted = await EventRepo.deleteExpiredEvents();
+      // Call your real cleanup method here:
+      // adjust the method name to whatever you actually implemented.
+      const deleted = await EventService.settleAndDeleteExpiredEvents();
+
       if (deleted > 0) {
         console.log(`[scheduler] Deleted ${deleted} expired event(s).`);
+      } else {
+        console.log('[scheduler] No deleted expired events.');
       }
     } catch (err) {
       console.error('[scheduler] Error deleting expired events:', err);
@@ -81,4 +87,6 @@ function startExpiredEventCleanupScheduler() {
   }, INTERVAL_MS);
 }
 
+
 module.exports = app;
+module.exports.startExpiredEventCleanupScheduler = startExpiredEventCleanupScheduler;

@@ -7,7 +7,6 @@
  * NOTE: In production, rotate JWT_SECRET and prefer short expirations.
  */
 const jwt = require('jsonwebtoken');
-const { AppError } = require('../utils/errors');
 const { UserRepo } = require('../repositories/UserRepo');
 
 /**
