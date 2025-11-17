@@ -3,7 +3,7 @@
 exports.up = async function up(knex) {
   await knex.schema.createTable('user_preferences', (t) => {
     // match this type to your users.id (int/uuid) 👇
-    t.integer('user_id').unsigned().notNullable().references('id').inTable('users').onDelete('CASCADE');
+    t.integer('user_id').unsigned().notNullable().references('user_id').inTable('users').onDelete('CASCADE');
 
     t.string('currency', 3).notNullable().defaultTo('USD');
     t.string('language', 5).notNullable().defaultTo('en');
