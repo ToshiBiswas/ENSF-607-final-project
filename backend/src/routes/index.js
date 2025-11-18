@@ -9,7 +9,7 @@ const { EventsController } = require('../controllers/EventsController');
 const { UsersController } = require('../controllers/UsersController');
 const { CartController } = require('../controllers/CartController');
 const { PaymentsController } = require('../controllers/PaymentsController');
-const { NotificationController } = require('../controllers/NotificationController'); // <-- NEW
+const { NotificationController } = require('../controllers/NotificationController');
 const { TicketsController } = require('../controllers/TicketsController');
 const { CategoryController } = require('../controllers/CategoryController');
 const r = Router();
@@ -37,6 +37,8 @@ r.get('/me', requireAuth, UsersController.me);
 r.get('/auth/me', requireAuth, UsersController.me); 
 r.patch('/me', requireAuth, UsersController.updateProfile);
 r.get('/me/payment-methods', requireAuth, UsersController.paymentMethods);
+r.put('/me/preferences', requireAuth, UsersController.setPreferences);
+    
 /* ---------- CART ---------- */
 r.post('/cart/items', requireAuth, CartController.add);
 r.get('/cart', requireAuth, CartController.view);

@@ -8,6 +8,10 @@ import MyInfo from "./pages/MyInfo";
 import MyPaymentInfo from "./pages/MyPaymentInfo";
 import TransactionHistory from "./pages/TransactionHistory";
 import Navbar from "./components/Navbar";
+import Cart from "./components/Cart";
+import Checkout from "./components/Checkout";
+import AIAdvice from "./components/AIAdvice";
+import PaymentInfo from "./components/PaymentInfo";
 
 function App() {
   return (
@@ -29,6 +33,12 @@ function App() {
             <Route path="MyPaymentInfo" element={<MyPaymentInfo />} />
             <Route path="TransactionHistory" element={<TransactionHistory />} />
           </Route>
+
+          {/* Cart, Checkout, AI Advice, and Payment Info routes */}
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/ai-advice" element={<AIAdvice />} />
+          <Route path="/payment-info" element={<PaymentInfo />} />
         </Routes>
       </Router>
     </AuthProvider>
