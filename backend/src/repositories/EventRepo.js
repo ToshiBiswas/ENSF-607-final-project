@@ -120,11 +120,15 @@ static async toDomain(row) {
     );
   }
 
-  static async findById(eventId) {
+  static async findById(  eventId) {
     const row = await knex('events').where({ event_id: eventId }).first();
     return row ? this.toDomain(row) : null;
   }
+  static async findByIDTransactions(trx,eventId){
+        const row = await knex('events').where({ event_id: eventId }).first();
+    return row ? this.toDomain(row) : null;
 
+  }
   /** List events matching a category value */
   static async findByCategoryValue(value) {
     const rows = await knex('events as e')
@@ -207,20 +211,17 @@ static async toDomain(row) {
    *
    * @returns {Promise<number>} number of events deleted
    */
-  static async deleteExpiredEvents() {
-    const rows = await knex('events')
+  static async getExpiredEvents() {
+    const row = await knex('events')
       .whereNotNull('end_time')
       .andWhere('end_time', '<=', knex.fn.now())
-      .select('event_id');
+      .select('event_id as eventId', 
+        'organizer_id as organizeraId', 
+        ' payment_info_id as pinfoId', 
+        'title'
+      );
 
-    const ids = rows.map(r => r.event_id);
-    if (ids.length === 0) return 0;
-
-    for (const id of ids) {
-      await this.deleteEvent(id);
-    }
-
-    return ids.length;
+    return row;
   }
 
   /** Hard delete an event (cascade behaviour relies on FKs) */
@@ -237,12 +238,25 @@ static async toDomain(row) {
       if (hasTicketsTable) {
         await trx('tickets').where({ event_id: eventId }).del();
       }
-
+      if (!otherLink) {
+        const usedInPayments = await trx('payments')
+          .where({ payment_info_id: pid })
+          .first();
+        const usedInEvents = await trx('events')
+          .where({payment_info_id: pid})
+          .first()
+        if (!(usedInPayments || usedInEvents)) {
+          await trx('paymentinfo')
+            .where({ payment_info_id: pid })
+            .del();
+        }
+      }
       // Delete ticket types for this event
       await trx('ticketinfo').where({ event_id: eventId }).del();
 
       // Finally delete the event row
       await trx('events').where({ event_id: eventId }).del();
+
     });
   }
 

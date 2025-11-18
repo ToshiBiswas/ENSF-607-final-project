@@ -41,11 +41,6 @@ async function mintTicketsWithRetry(trx, { userId, eventId, infoId, purchaseId, 
 
     // keep generating until we get a unique code (with a safety cap)
     do {
-      if (attempts++ > 5) {
-        throw new AppError('Failed to generate unique ticket code', 500, {
-          code: 'CODE_COLLISION',
-        });
-      }
       code = generateTicketCode();
     } while (await TicketMintRepo.isCodeTaken(code, trx));
 

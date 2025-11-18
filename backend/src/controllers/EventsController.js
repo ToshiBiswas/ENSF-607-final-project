@@ -13,7 +13,10 @@ class EventsController {
    */
   static listByCategory = asyncHandler(async (req, res) => {
     const { category } = req.query;
-    const events = await EventService.listByCategory(category);
+    let events = await EventService.listByCategory(category);
+    for (let i = 0; i < events.length;i++){
+      events[i].organizer = events[i].organizer.name;
+    }
     res.json({ events });
   });
 
@@ -36,6 +39,9 @@ class EventsController {
     const organizerId = req.user.userId;
     console.log(organizerId)
     const events = await EventService.listMine(organizerId);
+    for (let i = 0; i < events.length;i++){
+      events[i].organizer = events[i].organizer.name;
+    }
     res.json({ events });
   });
 
