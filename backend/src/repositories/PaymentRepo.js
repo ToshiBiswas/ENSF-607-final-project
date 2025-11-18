@@ -100,47 +100,11 @@ class PaymentRepo {
     return q(REFUNDS).where({ refund_id: id }).first();
   }
 
-  static async listForUser(userId, query = {}) {
-    const page = Math.max(parseInt(query?.page || '1', 10), 1);
-    const pageSize = Math.min(Math.max(parseInt(query?.pageSize || '10', 10), 1), 100);
-    const status = query?.status;
-
-    const base = knex(TABLE)
-      .leftJoin('events as e', 'e.event_id', `${TABLE}.event_id`)
-      .leftJoin('paymentinfo as pi', 'pi.payment_info_id', `${TABLE}.payment_info_id`)
-      .where(`${TABLE}.user_id`, userId)
-      .modify((qb) => {
-        if (status) qb.andWhere(`${TABLE}.status`, status);
-      });
-
-    const [{ count }] = await base.clone().clearSelect().clearOrder().count({ count: '*' });
-    
-    const rows = await base
-      .select([
-        `${TABLE}.payment_id as paymentId`,
-        `${TABLE}.user_id as userId`,
-        `${TABLE}.event_id as eventId`,
-        `${TABLE}.ticket_info_id as ticketInfoId`,
-        `${TABLE}.payment_info_id as paymentInfoId`,
-        `${TABLE}.amount_cents as amountCents`,
-        `${TABLE}.currency`,
-        `${TABLE}.status`,
-        `${TABLE}.refunded_cents as refundedCents`,
-        `${TABLE}.provider_payment_id as providerPaymentId`,
-        `${TABLE}.created_at as createdAt`,
-        `${TABLE}.updated_at as updatedAt`,
-        'e.title as eventTitle',
-        'e.venue as eventVenue',
-        'pi.last4 as cardLast4',
-        'pi.name as cardName',
-      ])
-      .orderBy(`${TABLE}.created_at`, 'desc')
-      .limit(pageSize)
-      .offset((page - 1) * pageSize);
-
-    return { page, pageSize, total: Number(count), data: rows };
+  /** List all payments for a user */
+  static async listForUser(userId) {
+    const rows = await knex('payments').where({ user_id: userId }).orderBy('created_at', 'desc');
+    return Promise.all(rows.map(r => this.findById(r.payment_id)));
   }
-
 }
 
 module.exports = { PaymentRepo };
