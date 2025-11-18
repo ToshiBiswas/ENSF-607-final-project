@@ -7,42 +7,25 @@ const { knex } = require('../config/db');
 const { CartRepo } = require('../repositories/CartRepo');
 const { AppError } = require('../utils/errors');
 const { EventRepo } = require("../repositories/EventRepo")
-class DBCart {
-  constructor({ owner, cartRow, items }) {
-    this.owner = owner;        // { userId }
-    this._cart = cartRow;      // { cart_id, user_id, created_at }
-    this.items = items.map((i) => ({
-      cart_item_id: i.cart_item_id,
-      info_id: i.info_id,
-      quantity: i.quantity,
-      unit_price_cents: Number(i.unit_price_cents || 0),
-      ticket_name: i.ticket_name,
-      event_id: i.event_id,
-    }));
-  }
-
-  totalCents() {
-    return this.items.reduce(
-      (acc, it) => acc + Number(it.unit_price_cents || 0) * Number(it.quantity || 0),
-      0
-    );
-  }
-
-  toJSON() {
-    // keep serialized shape stable
-    return { owner: this.owner, items: this.items };
-  }
-}
+const { DBCart } = require("../domain/Cart")
 
 class CartService {
     static async addToCart(user, ticketInfoId, quantity) {
+    if (!ticketInfoId){
+      throw new AppError('Missing ticket_info_id', 400, { code: 'BAD_INFO_ID' });
+
+    }
+    if(!quantity){
+      throw new AppError('Missing quantity', 400, { code: 'BAD_QUANTITY' });
+
+    }
     const infoId = Number(ticketInfoId);
     const qty    = Number(quantity);
     if (!Number.isInteger(infoId) || infoId <= 0) {
-      throw new AppError('Invalid ticket_info_id', 400, { code: 'BAD_INFO_ID' });
+      throw new AppError('Invalid ticket_info_id', 400, { code: 'MISSING_INFO_ID' });
     }
     if (!Number.isInteger(qty) || qty <= 0) {
-      throw new AppError('Invalid quantity', 400, { code: 'BAD_QUANTITY' });
+      throw new AppError('Invalid quantity', 400, { code: 'MISSING_INFO_ID' });
     }
 
     return knex.transaction(async (trx) => {
@@ -70,6 +53,12 @@ class CartService {
 
   /** Set quantity for a cart item. qty=0 removes the item. */
   static async setItemQuantity(user, ticketInfoId, quantity) {
+    if (!ticketInfoId){
+      throw new AppError('Missing ticket_info_id', 400, { code: 'MISSING_INFO_ID' });
+    }
+    if(!quantity){
+      throw new AppError('Missing quantity', 400, { code: 'MISSING_INFO_ID' });
+    }
     const infoId = Number(ticketInfoId);
     const qty    = Number(quantity);
     if (!Number.isInteger(infoId) || infoId <= 0) {
@@ -109,16 +98,25 @@ class CartService {
     return knex.transaction(async (trx) => {
       const cartRow = await CartRepo.getOrCreateCartForUser(user.userId, trx);
       const items   = await CartRepo.getItems(cartRow.cart_id, trx);
+      console.log(items);
       let itemsNew = [];
-      for(i in items){
-        const event = EventRepo.findById(i.event_id)
+      for(const i in items){
+        console.log(items[i].event_id)
+        const event = await EventRepo.findById(items[i].event_id)
+        console.log(event)
         if(event.purchasable()){
-          itemsNew.push(i)
+          itemsNew.push(items[i])
         }else{
-          CartRepo.removeItem(cartRow.cart_id, i.info_id,trx)
+          CartRepo.removeItem(cartRow.cart_id, items[i].info_id,trx)
         }
       }
-      return new DBCart({ owner: user, cartRow, items });
+      const cartItems = await CartRepo.getItems(cartRow.cart_id);
+
+      return new DBCart({
+        user,
+        cartRow,
+        items: cartItems || [],   // safe even if the query returns null/undefined
+      });    
     });
   }
 
