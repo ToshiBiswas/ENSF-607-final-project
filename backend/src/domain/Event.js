@@ -27,6 +27,10 @@ class Event {
   isActive(at = new Date()) {
     return at >= this.startTime && at <= this.endTime;
   }
+  /**
+   * Is this event active at a given time?
+   * @param {Date} [at=new Date()]
+   */
   purchasable(at = new Date()) {
     return at <= this.startTime;
   }

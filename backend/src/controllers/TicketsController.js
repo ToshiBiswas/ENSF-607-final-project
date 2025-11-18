@@ -1,19 +1,18 @@
 // backend/src/controllers/tickets.controller.js
-const TicketService = require('../services/TicketingService');
 const asyncHandler = require('../utils/handler');
+const { TicketingService } = require('../services/TicketingService');
 
 class TicketsController {
   // GET /api/tickets  (authenticated user’s tickets)
   static async getMyTickets(req, res) {
-    const result = await TicketService.getMyTickets(req.user, req.query);
-    // `result` can contain { page, pageSize, total, data } or just an array
+    const result = await TicketingService.getMyTickets(req.user, req.query);
     res.json({ message: 'Get tickets: successful', ...result });
   }
 
   //  GET /api/tickets/:id 
   static async getTicketById(req, res) {
     const id = Number(req.params.id);
-    const data = await TicketService.getTicketById(req.user, id);
+    const data = await TicketingService.getTicketById(req.user, id);
     res.json({ message: 'Get ticket: successful', data });
   }
 
@@ -30,4 +29,4 @@ class TicketsController {
   });
 }
 
-module.exports = TicketsController;
+module.exports = {TicketsController};

@@ -39,7 +39,7 @@ class NotificationRepo {
    * List notifications for a user that are due (send_at <= now).
    * Optional "since" filter and "limit" cap.
    */
-  static async listForUser(userId, { since = null, limit = 50 } = {}) {
+  static async listForUser(userId, {limit = 50 , since = null} = {}) {
     const now = new Date();
     const q = knex(this.table)
       .where('user_id', Number(userId))

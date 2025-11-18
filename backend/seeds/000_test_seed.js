@@ -62,7 +62,6 @@ exports.seed = async function(knex) {
   await knex('ticketinfo').del().catch(()=>{});
   await knex('eventscategories').del().catch(()=>{});
   await knex('events').del().catch(()=>{});
-  await knex('userpreferences').del().catch(()=>{});
   await knex('paymentinfo').del().catch(()=>{});
   await knex('categoriesid').del().catch(()=>{});
   await knex('users').del().catch(()=>{});
@@ -80,7 +79,7 @@ exports.seed = async function(knex) {
   const userIds = {};
   for (const u of users) {
     const [id] = await knex('users').insert({ name: u.name, email: u.email, role: u.role, password_hash: passwordHash });
-    userIds[u.email] = id;
+    userIds[u.email] = id;  
   }
 
   // Categories
@@ -123,7 +122,6 @@ exports.seed = async function(knex) {
       organizer_id: userIds[e.organizer_email],
       title: e.title, description: e.description, location: e.location,
       start_time: new Date(e.start_time), end_time: new Date(e.end_time),
-      ticket_type: 'general'
     });
     eventIds[e.title] = event_id;
     for (const cv of e.categories) {

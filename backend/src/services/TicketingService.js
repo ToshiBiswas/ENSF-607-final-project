@@ -1,3 +1,5 @@
+'use strict';
+
 const crypto = require('crypto');
 /**
  * TicketingService
@@ -15,6 +17,10 @@ const { EventRepo } = require('../repositories/EventRepo');
 const { TicketMintRepo } = require('../repositories/TicketMintRepo');
 const { NotificationService } = require('./NotificationService');
 const { CartService } = require("./CartService")
+const { MockPaymentProcessor } = require("./MockPaymentProcessor")
+const { PaymentRepo } = require('../repositories/PaymentRepo');
+const { UserCardRepo } = require('../repositories/UserCardRepo');
+
 /** Generate a 6-digit code. Probability of collision is low; DB unique index prevents duplicates when table exists. */
 function generateTicketCode() {
   // 15-digit numeric code using crypto.randomInt to reduce collisions
@@ -26,25 +32,34 @@ function generateTicketCode() {
 }
 
 
-// Retry-mint helper to avoid duplicate ticket codes (MySQL ER_DUP_ENTRY 1062)
-async function mintTicketsWithRetry(trx, { userId, eventId, infoId, paymentId, qty, maxAttempts = 5 }) {
+async function mintTicketsWithRetry(trx, { userId, eventId, infoId, purchaseId, qty }, item) {
   const minted = [];
+
   for (let i = 0; i < qty; i++) {
     let attempts = 0;
-    while (true) {
-      attempts += 1;
-      const code = generateTicketCode();
-      try {
-        const t = await TicketMintRepo.save({ code, ownerId: userId, eventId, infoId, paymentId }, trx);
-        minted.push(t);
-        break;
-      } catch (e) {
-        const isDup = (e && (e.code === 'ER_DUP_ENTRY' || e.errno === 1062));
-        if (isDup && attempts < maxAttempts) continue;
-        throw e;
-      }
-    }
+    let code;
+
+    // keep generating until we get a unique code (with a safety cap)
+    do {
+      code = generateTicketCode();
+    } while (await TicketMintRepo.isCodeTaken(code, trx));
+
+    // tickets + purchases both go through the same trx
+    const ticket = await TicketMintRepo.save(
+      { code, ownerId: userId, eventId, infoId, purchaseId: null },
+      trx
+    );
+
+    await PaymentRepo.insertPurchase(
+      purchaseId,
+      ticket.ticketId,
+      item.unit_price_cents,
+      trx
+    );
+
+    minted.push(ticket);
   }
+
   return minted;
 }
 
@@ -140,122 +155,92 @@ static async validateTicket({ currentUser, eventId, code }) {
     if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) throw new AppError('Cart is empty', 400);
 
     const paymentService = require('./PaymentService').PaymentService;
-
+    let ccv = null;
     // Pick payment method: saved card or verify+store new card
     let pinfo = null;
     if (usePaymentInfoId) {
-      const { PaymentInfoRepo } = require('../repositories/PaymentInfoRepo');
-      pinfo = await PaymentInfoRepo.findById(usePaymentInfoId);
-      if (!pinfo || pinfo.owner.userId !== user.userId) throw new AppError('Payment method not found', 404);
+      if(usePaymentInfoId.id){
+        const { PaymentInfoRepo } = require('../repositories/PaymentInfoRepo');
+        pinfo = await PaymentInfoRepo.findById(usePaymentInfoId.id);
+      }else{
+        throw new AppError('Provide an existing account ID', 400);
+      }
+      if(usePaymentInfoId.ccv){
+        ccv = usePaymentInfoId.ccv;
+      }else{
+        throw new AppError('ccv not provided.', 400);
+      }
+      
+      if (!pinfo || !UserCardRepo.isLinked(user.userId,pinfo.paymentInfoId)) throw new AppError('Payment method not found', 404);
     } else if (newCard) {
       pinfo = await paymentService.verifyAndStore(user.userId, newCard);
+      ccv = newCard.ccv
     } else {
       throw new AppError('No payment method provided', 400);
     }
-
+    MockPaymentProcessor.purchase({
+      accountId :pinfo.accountId,
+      ccv,
+      amountCents: cart.totalCents()
+    });
+    const payment = await require('./PaymentService').PaymentService.chargeAndRecord({
+      userId: user.userId,
+      paymentInfo: pinfo,
+      amountCents: cart.totalCents()
+,
+    });
     const minted = [];
     // Single encompassing transaction: ensures stock decrement + payment record stay consistent
     await knex.transaction(async (trx) => {
       for (const item of cart.items) {
-        // LOCK the stock row to prevent race conditions
+        // 1. Lock the stock row
         const locked = await TicketInfoRepo.lockAndLoad(trx, item.info_id);
         if (!locked) throw new AppError('Ticket type not found', 404);
-        if (locked.row.tickets_left < item.quantity) throw new AppError('Insufficient stock at checkout', 400);
 
-        // Ensure event is still active at the moment of purchase
-        const evts = await EventRepo.findById(locked.row.event_id);
-        if (!(evts.purchasable())) {
+        if (locked.row.tickets_left < item.quantity) {
+          throw new AppError('Insufficient stock at checkout', 400);
+        }
+
+        // 2. Check event still purchasable
+        const evt = await EventRepo.findById(locked.row.event_id);
+        if (!evt || !evt.purchasable()) {
           throw new AppError('Event not available', 400);
         }
 
-        // Compute total for this cart line
-        const amountCents = Math.round(Number(locked.row.ticket_price) * 100) * item.quantity;
-
-        // Provider charge + local Payment row
-        const payment = await require('./PaymentService').PaymentService.chargeAndRecord({
-          userId: user.userId,
-          eventId: locked.row.event_id,
-          ticketInfoId: locked.row.info_id,
-          paymentInfo: pinfo,
-          amountCents,
-          currency: 'CAD',
-          idempotencyKey: `user${user.userId}-info${locked.row.info_id}-ts${Date.now()}`
-        });
-
-        // Decrement stock atomically
+        // 3. Decrement stock using the same trx
         await TicketInfoRepo.decrementLeft(trx, locked.row.info_id, item.quantity);
-        const mintedBatch = await mintTicketsWithRetry(trx, {
-          userId: user.userId,
-          eventId: locked.row.event_id,
-          infoId:  locked.row.info_id,
-          paymentId: payment.paymentId,   // use id returned by PaymentService
-          qty: item.quantity
-        });
+
+        // 4. Mint tickets using the same trx
+        const mintedBatch = await mintTicketsWithRetry(
+          trx,
+          {
+            userId: user.userId,
+            eventId: locked.row.event_id,
+            infoId: locked.row.info_id,
+            purchaseId: payment.paymentId,
+            qty: item.quantity,
+          },
+          item
+        );
+
         minted.push(...mintedBatch);
 
-      // Notify purchaser (webhook + DB)
-      await NotificationService.queue({
-        userId: user.userId,
-        title: 'payment_approved',
-        message: `Payment approved and ${item.quantity} ticket(s) minted`,
-        eventId: locked.row.event_id,
-        paymentId: payment.paymentId
-      });
+        // 5. Queue notifications – safe to use non-trx here since it’s just an insert
+        await NotificationService.queue({
+          userId: user.userId,
+          title: 'payment_approved',
+          message: `Payment approved and ${item.quantity} ticket(s) minted`,
+          eventId: locked.row.event_id,
+          paymentId: payment.paymentId,
+        });
       }
-    });
-
+    }); 
     // Clear cart OUTSIDE the transaction
-    CartService.clear();
-    return { tickets: minted.map(t => t.code) };
-  }
-  static async createTicket(user, body) {
-    if (!user?.id) {
-      const err = new Error('Unauthorized');
-      err.status = 401;
-      throw err;
-    }
-
-    const eventId = Number.parseInt(String(body?.eventId ?? ''), 10);
-    const quantity = Number.isFinite(body?.quantity) ? Number(body.quantity) : 1;
-    const ticketType = (body?.ticketType || 'general').trim();
-    const ticketInfoId = body?.ticketInfoId ? Number(body.ticketInfoId) : null;
-    const explicitPrice = body?.price; // optional override
-
-    if (!Number.isInteger(eventId) || eventId <= 0) {
-      const err = new Error('Invalid event id');
-      err.status = 400;
-      throw err;
-    }
-    if (!Number.isInteger(quantity) || quantity <= 0) {
-      const err = new Error('Quantity must be a positive integer');
-      err.status = 400;
-      throw err;
-    }
-
-    const created = [];
-    for (let i = 0; i < quantity; i++) {
-      const ticket = await mintTicketsWithRetry({
-        user_id: user.id,
-        event_id: eventId,
-        ticket_type: ticketType,
-        price: explicitPrice,        // if null, purchase() falls back to TicketInfo price
-        ticket_info_id: ticketInfoId // if null, purchase() resolves by (event_id, type)
-      });
-      created.push(ticket);
-    }
-
-    const unitPrice = (explicitPrice != null)
-      ? Number(explicitPrice)
-      : Number(created[0]?.price ?? 0);
-    const totalPaid = (unitPrice * quantity).toFixed(2);
-
-    // If you have currency on TicketInfo or ticket row, return it; else default
-    const currency = created[0]?.currency || 'USD';
-
-    return { data: created, quantity, totalPaid, currency };
+    await CartService.clear(user);
+    return { tickets: minted.map(t => this.getTicketById(user,)) };
   }
    static async getMyTickets(user, query) {
-    if (!user?.id) {
+    if (!user?.userId) {
       const err = new Error('Unauthorized');
       err.status = 401;
       throw err;
@@ -267,7 +252,7 @@ static async validateTicket({ currentUser, eventId, code }) {
 
     const base = db('tickets as t')
       .leftJoin('events as e', 'e.id', 't.event_id')
-      .where('t.user_id', user.id)
+      .where('t.user_id', user.userId)
       .modify((qb) => {
         if (status) qb.andWhere('t.status', status);
         if (upcoming) qb.andWhere('e.start_at', '>=', db.fn.now());
@@ -292,12 +277,39 @@ static async validateTicket({ currentUser, eventId, code }) {
   /**
    * One ticket by id (must belong to current user), with event info.
    */
-  static async getTicketById(user, id) {
-    if (!user?.id) {
+  static async getMyTickets(user, query) {
+    if (!user?.userId) {
       const err = new Error('Unauthorized');
       err.status = 401;
       throw err;
     }
+
+    const page = Math.max(parseInt(query?.page || '1', 10), 1);
+    const pageSize = Math.min(Math.max(parseInt(query?.pageSize || '10', 10), 1), 100);
+    const status = query?.status;
+    const upcoming = String(query?.upcoming) === 'true';
+
+    const { total, data } = await TicketMintRepo.listForUser({
+      userId: user.userId,
+      page,
+      pageSize,
+      status,
+      upcoming,
+    });
+
+    return { page, pageSize, total, data };
+  }
+
+  /**
+   * One ticket by id (must belong to current user), with event info.
+   */
+  static async getTicketById(user, id) {
+    if (!user?.userId) {
+      const err = new Error('Unauthorized');
+      err.status = 401;
+      throw err;
+    }
+
     const ticketId = Number.parseInt(String(id ?? ''), 10);
     if (!Number.isInteger(ticketId) || ticketId <= 0) {
       const err = new Error('Invalid ticket id');
@@ -305,116 +317,18 @@ static async validateTicket({ currentUser, eventId, code }) {
       throw err;
     }
 
-    const row = await db('tickets as t')
-      .leftJoin('events as e', 'e.id', 't.event_id')
-      .select([
-        't.id', 't.event_id', 't.user_id', 't.quantity',
-        't.price_paid', 't.currency', 't.status',
-        't.created_at', 't.updated_at',
-        'e.title as event_title', 'e.venue as event_venue',
-        'e.start_at as event_start', 'e.end_at as event_end',
-      ])
-      .where('t.id', ticketId)
-      .andWhere('t.user_id', user.id)
-      .first();
+    const row = await TicketMintRepo.findOwnedTicket({
+      userId: user.userId,
+      ticketId,
+    });
 
     if (!row) {
       const err = new Error('Ticket not found');
       err.status = 404;
       throw err;
     }
+
     return { data: row };
-  }
-
-static async updateTicket(user, id, patch) {
-    if (!user?.id) {
-      const err = new Error('Unauthorized');
-      err.status = 401;
-      throw err;
-    }
-    const ticketId = Number.parseInt(String(id ?? ''), 10);
-    if (!Number.isInteger(ticketId) || ticketId <= 0) {
-      const err = new Error('Invalid ticket id');
-      err.status = 400;
-      throw err;
-    }
-
-    // Restrict what can be updated
-    const allowed = {};
-    if (typeof patch?.status === 'string') {
-      allowed.status = patch.status.trim();
-    }
-
-    if (Object.keys(allowed).length === 0) {
-      const err = new Error('No updatable fields provided');
-      err.status = 400;
-      throw err;
-    }
-
-    // Ensure ticket belongs to user
-    const exists = await db('tickets')
-      .where({ id: ticketId, user_id: user.id })
-      .first();
-
-    if (!exists) {
-      const err = new Error('Ticket not found');
-      err.status = 404;
-      throw err;
-    }
-
-    await db('tickets')
-      .where({ id: ticketId, user_id: user.id })
-      .update({ ...allowed, updated_at: db.fn.now() });
-
-    // Return updated record (with event info for parity with other getters)
-    const updated = await db('tickets as t')
-      .leftJoin('events as e', 'e.id', 't.event_id')
-      .select([
-        't.id', 't.event_id', 't.user_id', 't.quantity',
-        't.price_paid', 't.currency', 't.status',
-        't.created_at', 't.updated_at',
-        'e.title as event_title', 'e.venue as event_venue',
-        'e.start_at as event_start', 'e.end_at as event_end',
-      ])
-      .where('t.id', ticketId)
-      .andWhere('t.user_id', user.id)
-      .first();
-
-    return { data: updated };
-  }
-
-  /**
-   * Delete a ticket that belongs to the current user.
-   */
-  static async deleteTicket(user, id) {
-    if (!user?.id) {
-      const err = new Error('Unauthorized');
-      err.status = 401;
-      throw err;
-    }
-    const ticketId = Number.parseInt(String(id ?? ''), 10);
-    if (!Number.isInteger(ticketId) || ticketId <= 0) {
-      const err = new Error('Invalid ticket id');
-      err.status = 400;
-      throw err;
-    }
-
-    // Verify ownership
-    const exists = await db('tickets')
-      .where({ id: ticketId, user_id: user.id })
-      .first();
-
-    if (!exists) {
-      const err = new Error('Ticket not found');
-      err.status = 404;
-      throw err;
-    }
-
-    await db('tickets')
-      .where({ id: ticketId, user_id: user.id })
-      .del();
-
-    return { id: ticketId, deleted: true };
   }
 }
 module.exports = { TicketingService };
