@@ -60,7 +60,13 @@ class UserCardRepo {
     // Will throw AppError if duplicate race, which is fine for this project.
     return this.link(userId, paymentInfoId);
   }
-
+  static async partOFLinked(paymentInfoId){
+    const r = await knex(TABLE)
+      .where({payment_info_id: paymentInfoId })
+      .first();
+    return !!r;
+  }
+  
   /**
    * Get the joined user-card + paymentinfo record if it exists.
    * Useful when you want to "see" that the card & link exist in one go.

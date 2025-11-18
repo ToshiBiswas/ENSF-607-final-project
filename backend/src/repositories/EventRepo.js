@@ -234,26 +234,33 @@ static async toDomain(row) {
       } catch (_) {
         /* ignore */
       }
-
-      if (hasTicketsTable) {
-        await trx('tickets').where({ event_id: eventId }).del();
-      }
-      if (!otherLink) {
+      const row = await knex('events')
+        .where({ event_id: eventId})
+        .first()
+        .select('event_id as eventId', 
+          ' payment_info_id as pinfoId'
+        );
+      const exists= await trx('user_cards')
+        .where({ payment_info_id: row.pinfoId })
+        .first();
+      if (!exists) {
         const usedInPayments = await trx('payments')
-          .where({ payment_info_id: pid })
+          .where({ payment_info_id: row.pinfoId })
           .first();
         const usedInEvents = await trx('events')
-          .where({payment_info_id: pid})
+          .where({payment_info_id: row.pinfoId})
           .first()
         if (!(usedInPayments || usedInEvents)) {
           await trx('paymentinfo')
-            .where({ payment_info_id: pid })
+            .where({ payment_info_id: row.pinfoId })
             .del();
         }
       }
       // Delete ticket types for this event
       await trx('ticketinfo').where({ event_id: eventId }).del();
-
+      if (hasTicketsTable) {
+        await trx('tickets').where({ event_id: eventId }).del();
+      }
       // Finally delete the event row
       await trx('events').where({ event_id: eventId }).del();
 

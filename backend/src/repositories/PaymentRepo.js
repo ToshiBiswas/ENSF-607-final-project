@@ -14,7 +14,7 @@ const PURCHASES = 'purchases';
 
 class PaymentRepo {
   static async findByUserId(userId) {
-    const rows = await knex(TABLE)
+    const rows = await knex(PAYMENTS)
       .where({ user_id: userId })
       .orderBy('created_at', 'desc');
 
