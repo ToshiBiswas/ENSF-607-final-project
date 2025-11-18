@@ -31,10 +31,22 @@ function notFound(_req, _res, next) {
  */
 function errorMiddleware(err, _req, res, _next) {
   if (err instanceof AppError) {
-    return res.status(err.status).json({ error: err.message, ...err.extra });
+    // Match the documented error format
+    return res.status(err.status).json({ 
+      error: { 
+        code: err.extra.code || 'ERROR', 
+        message: err.message,
+        ...(err.extra.details && { details: err.extra.details })
+      } 
+    });
   }
   console.error(err);
-  return res.status(500).json({ error: 'Internal Server Error' });
+  return res.status(500).json({ 
+    error: { 
+      code: 'INTERNAL_ERROR', 
+      message: 'Internal Server Error' 
+    } 
+  });
 }
 
 module.exports = { AppError, errorMiddleware, notFound };

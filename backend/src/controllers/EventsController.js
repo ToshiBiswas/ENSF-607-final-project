@@ -82,9 +82,10 @@ class EventsController {
    * List ticket types (price/quantity/left) for an event.
    */
   static ticketTypes = asyncHandler(async (req, res) => {
-    const evt = await EventRepo.findById(Number(req.params.id));
-    if (!evt) return res.status(404).json({ error: 'Not found' });
-    res.json({ ticketTypes: evt.tickets });
+    const eventId = Number(req.params.id);
+    const event = await EventRepo.findById(Number(req.params.id));
+    if (!event) return res.status(404).json({ error: 'Not found' });
+    res.json({ ticketTypes: event.tickets });
   });
 }
 

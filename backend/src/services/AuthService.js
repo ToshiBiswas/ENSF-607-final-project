@@ -16,7 +16,7 @@ class AuthService {
    */
   static async register({ name, email, password }) {
     const exists = await UserRepo.findByEmail(email);
-    if (exists) throw new AppError('Email already in use', 409);
+    if (exists) throw new AppError('Email already in use', 409, { code: 'DUPLICATE_EMAIL' });
     const hash = await bcrypt.hash(password, 10);
     const user = await UserRepo.insert({ name, email, passwordHash: hash });
     const token = signJwt({ userId: user.userId, email: user.email, role: user.role });
@@ -29,11 +29,11 @@ class AuthService {
    */
   static async login({ email, password }) {
     const row = await UserRepo.findByEmail(email);
-    if (!row) throw new AppError('Invalid credentials', 401);
+    if (!row) throw new AppError('Invalid credentials', 401, { code: 'INVALID_CREDENTIALS' });
     // Fetch hash directly (domain doesn't include it)
     const r = await require('../config/db').knex('users').where({ email }).first();
     const ok = await bcrypt.compare(password, r.password_hash);
-    if (!ok) throw new AppError('Invalid credentials', 401);
+    if (!ok) throw new AppError('Invalid credentials', 401, { code: 'INVALID_CREDENTIALS' });
     const token = signJwt({ userId: r.user_id, email: r.email, role: r.role });
     return { user: await UserRepo.findById(r.user_id), token };
   }

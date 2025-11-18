@@ -16,6 +16,9 @@ const { UserRepo } = require('../repositories/UserRepo');
  */
 function signJwt(payload, opts = {}) {
   const secret = process.env.JWT_SECRET || 'changeme';
+  if (!secret || secret === 'changeme') {
+    throw new Error('JWT_SECRET must be set in production');
+  }
   return jwt.sign(payload, secret, { expiresIn: '7d', ...opts });
 }
 
@@ -25,6 +28,7 @@ function signJwt(payload, opts = {}) {
  */
 async function requireAuth(req, res, next) {
   try {
+    
     const auth = req.headers.authorization || '';
     const [scheme, token] = auth.split(' ');
 
@@ -33,7 +37,12 @@ async function requireAuth(req, res, next) {
     }
 
     // Verify token
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      return res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'JWT configuration error' } });
+    }
+    const payload = jwt.verify(token, secret);
+
     const userId = payload.sub || payload.userId || payload.id;
     if (!userId) {
       return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid token payload' } });
