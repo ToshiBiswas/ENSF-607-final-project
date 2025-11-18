@@ -1,59 +1,59 @@
-/**
- * Authentication API
- */
+// src/api/auth.ts
 import { apiClient } from './client';
 
 export interface User {
   userId: number;
   name: string;
   email: string;
-  role: 'user' | 'admin' | 'organizer';
-  preferences?: {
-    preferenceId: number;
-    location?: string;
-    preferredCategory?: string;
-  };
-  paymentMethods?: Array<{
-    paymentInfoId: number;
-    accountId: string;
-    name: string;
-    last4: string;
-    expMonth: number;
-    expYear: number;
-    currency: string;
-    primary: boolean;
-  }>;
+  // add any other fields your backend returns
 }
 
-export interface LoginRequest {
+interface AuthResponse {
+  accessToken: string;
+  user: User;
+}
+
+interface LoginPayload {
   email: string;
   password: string;
 }
 
-export interface RegisterRequest {
+interface RegisterPayload {
   name: string;
   email: string;
   password: string;
 }
 
-export interface AuthResponse {
-  user: User;
-  token: string;
+async function login(payload: LoginPayload): Promise<AuthResponse> {
+  return apiClient.post<AuthResponse>('/auth/login', payload);
+}
+
+async function register(payload: RegisterPayload): Promise<AuthResponse> {
+  return apiClient.post<AuthResponse>('/auth/register', payload);
+}
+
+/**
+ * Refresh access token.
+ * Refresh token is stored in an HttpOnly cookie — we do NOT send it from JS.
+ * The `_refreshToken` param is kept only for backwards compatibility and ignored.
+ */
+async function refresh(_refreshToken?: string): Promise<AuthResponse> {
+  return apiClient.post<AuthResponse>('/auth/refresh');
+}
+
+/**
+ * Logout and clear refresh cookie on backend.
+ * `_refreshToken` is ignored; cookie handles it.
+ */
+async function logout(_refreshToken?: string): Promise<void> {
+  await apiClient.post('/auth/logout');
 }
 
 export const authApi = {
-  /**
-   * Register a new user
-   */
-  register: async (data: RegisterRequest): Promise<AuthResponse> => {
-    return apiClient.post<AuthResponse>('/auth/register', data);
-  },
-
-  /**
-   * Login user
-   */
-  login: async (data: LoginRequest): Promise<AuthResponse> => {
-    return apiClient.post<AuthResponse>('/auth/login', data);
-  },
+  login,
+  register,
+  refresh,
+  logout,
 };
 
+export type { AuthResponse };

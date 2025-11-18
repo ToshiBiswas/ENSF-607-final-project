@@ -18,7 +18,10 @@ const r = Router();
 
 /* ---------- AUTH ---------- */
 r.post('/auth/register', AuthController.register);
-r.post('/auth/login',    AuthController.login);
+r.post('/auth/login', AuthController.login);
+r.post('/auth/refresh', AuthController.refresh);
+r.post('/auth/logout', AuthController.logout);
+r.post('/auth/logout-all', requireAuth, AuthController.logoutAll);
 
 /* ---------- EVENTS ---------- */
 r.get('/events', EventsController.listByCategory); // ?category=Music

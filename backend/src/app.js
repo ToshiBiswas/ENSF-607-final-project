@@ -24,19 +24,21 @@
  *   - Node 18+ for native fetch (or polyfill if needed)
  *   - Heavily commented to show intent and extension points
  */
-
 require('dotenv').config();
 const express = require('express');
 const morgan = require('morgan');
-const cors = require('cors');
-
-// Central route registry
+const cookieParser = require('cookie-parser');
+const cors = require('cors');              
+const { EventRepo } = require('./repositories/EventRepo');
+const { EventService } = require('./services/EventService');
 const routes = require('./routes');
-
-// Error helpers
 const { errorMiddleware, notFound } = require('./utils/errors');
 
 const app = express();
+app.use(cors({
+  origin: 'http://localhost:5173',   // your Vite dev URL
+  credentials: true,                 // allow cookies
+}));
 
 // CORS configuration
 app.use(cors({
@@ -46,7 +48,7 @@ app.use(cors({
 
 // JSON body parsing
 app.use(express.json());
-
+app.use(cookieParser());
 // Dev request logging; swap for pino in prod if you prefer
 app.use(morgan('dev'));
 
@@ -73,7 +75,7 @@ if (require.main === module) {
   });
 }
 function startExpiredEventCleanupScheduler() {
-  const INTERVAL_MS = 6 * 1000; // 1 minute
+  const INTERVAL_MS = process.env.INTERVAL_MS
   console.log('started Expired Events')
   setInterval(async () => {
     try {

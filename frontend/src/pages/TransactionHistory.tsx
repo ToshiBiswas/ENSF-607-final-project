@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { usersApi, Payment } from "../api/users";
+import { usersApi,type Payment } from "../api/users";
 
 const TransactionHistory: React.FC = () => {
     const [payments, setPayments] = useState<Payment[]>([]);

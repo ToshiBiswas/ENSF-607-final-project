@@ -8,7 +8,7 @@ const { PaymentRepo } = require('../repositories/PaymentRepo')
 const {NotificationService} = require("./NotificationService")
 const {CategoryRepo} = require('../repositories/CategoryRepo')
 const { UserCardRepo } = require('../repositories/UserCardRepo');
-
+const { NotificationRepo} = require('../repositories/NotificationRepo')
 /** Normalize/validate title once */
 function normalizeTitle(title) {
   const t = String(title ?? '').trim();
@@ -247,29 +247,36 @@ class EventService {
     }
 
     // Gather all successful payments to refund
+// Gather all successful payments to refund
     const approved = await PaymentRepo.listApprovedForEvent(id);
-    
+
     for (const p of approved) {
+      // Using the row shape from listApprovedForEvent
+      const purchaserUserId = p.user_id;
+      const paymentId = p.payment_id;
+      const purchaseId = p.purchase_id;
+
       try {
         await PaymentService.refund(p);
-        // notify purchaser about refund
-          await NotificationService.queue({
-            userId: p.payment.userId,
-            title: 'refund_issued',
-            message: `Event canceled. Your payment ${p.purchase_id} was refunded.`,
-            eventId: id           
-          })
+
+        await NotificationService.queue({
+          userId: purchaserUserId,
+          title: 'refund_issued',
+          message: `Event canceled. Your payment ${paymentId} (purchase ${purchaseId}) was refunded.`,
+          eventId: id,
+        });
       } catch (e) {
-        console.warn('Refund failed', p.purchase_id, e?.message || e);
-        // optional failure notice
-          await NotificationService.queue({
-            userId: p.payment.userId,
-            title: 'refund_failed',
-            message: `The refund could not be processed.`,
-            eventId: id
-          })
+        console.warn('Refund failed', purchaseId, e?.message || e);
+
+        await NotificationService.queue({
+          userId: purchaserUserId,
+          title: 'refund_failed',
+          message: `The refund for payment ${paymentId} could not be processed.`,
+          eventId: id,
+        });
       }
     }
+
 
     // Best-effort: purge notifications/reminders tied to the event
     if (typeof NotificationRepo?.deleteRemindersForEvent === 'function') {
