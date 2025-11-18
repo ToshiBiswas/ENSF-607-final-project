@@ -3,9 +3,7 @@
  * Groups endpoints by controller and applies auth where required.
  */
 const { Router } = require('express');
-const { requireAuth } = require('../middleware/auth');
-const ticketsRoutes = require('./tickets.routes');
-
+const { requireAuth } = require('../utils/jwt');
 const { AuthController } = require('../controllers/AuthController');
 const { EventsController } = require('../controllers/EventsController');
 const { UsersController } = require('../controllers/UsersController');
@@ -49,6 +47,7 @@ r.post('/cart/checkout', requireAuth, CartController.checkout);
 /* ---------- PAYMENTS ---------- */
 r.post('/payments/verify-card', requireAuth, PaymentsController.verifyCard);
 r.delete('/me/payment-methods/:paymentInfoId', requireAuth, PaymentsController.deletePaymentMethod);
+r.get('/payments', requireAuth, PaymentsController.listMyPayments);
 
 /* ---------- NOTIFICATIONS ---------- */
 // Processes and sends all pending notifications due as of "now"
