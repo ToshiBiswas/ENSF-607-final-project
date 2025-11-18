@@ -2,8 +2,13 @@
  * AuthController
  * Bridges HTTP <-> AuthService
  */
+'use strict';
+
 const { AuthService } = require('../services/AuthService');
 const asyncHandler = require('../utils/handler');
+const { CartService } = require('../services/CartService');
+
+// OOP singleton emitter (transport = WebhookService, payloads = WebhookEnvelope)
 
 class AuthController {
   /**
@@ -14,6 +19,7 @@ class AuthController {
   static register = asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
     const result = await AuthService.register({ name, email, password });
+    CartService.getCart(result.user);
     res.status(201).json(result);
   });
 
@@ -25,7 +31,7 @@ class AuthController {
   static login = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
     const result = await AuthService.login({ email, password });
-    res.json(result);
+    res.status(201).json(result);
   });
 }
 

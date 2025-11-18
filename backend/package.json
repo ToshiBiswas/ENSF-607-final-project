@@ -22,5 +22,12 @@
     "morgan": "^1.10.1",
     "mysql2": "^3.15.3",
     "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "dotenv": "^17.2.3",
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }

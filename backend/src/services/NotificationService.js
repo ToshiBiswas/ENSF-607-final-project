@@ -1,26 +1,34 @@
+// services/NotificationService.js
+'use strict';
+
 /**
  * NotificationService
- * Bridges persistence (NotificationRepo) and transport (WebhookService).
+ * DB-only, polling model:
+ *  - queue(): persist a notification
+ *  - deliverToUser(): no-op (kept for compatibility)
+ *  - deliverDue(): no-op (polling replaces push delivery)
+ *  - listForUser(): read due notifications (frontend polls)
  */
+
 const { NotificationRepo } = require('../repositories/NotificationRepo');
-const { WebhookService } = require('./WebhookService');
 
 class NotificationService {
   /**
-   * Create + deliver a notification.
-   * Any transport failures are logged; the DB record still exists.
+   * Persist a notification.
+   * @param {{userId:number, eventId?:number|null, title:string, message:string, sendAt?:Date}} input
+   * @returns {Promise<object>}
    */
-  static async notify({ userId, type, message, eventId = null, paymentId = null }) {
-    const n = await NotificationRepo.insert({ userId, type, message, eventId, paymentId });
-    await WebhookService.send({
-      type,
-      message,
-      user_id: userId,
-      event_id: eventId,
-      payment_id: paymentId,
-      notification_id: n.notificationId
-    });
-    return n;
+  static async queue(input) {
+    return NotificationRepo.insert(input);
+  }
+  /**
+   * List notifications for a user that are due (send_at <= now).
+   * Mirrors NotificationRepo.listForUser.
+   * @param {number} userId
+   * @param {{limit?:number, since?:Date|string}} [opts]
+   */
+  static async listForUser(userId, { limit = 50, since = null } = {}) {
+    return NotificationRepo.listForUser(userId, { limit, since });
   }
 }
 

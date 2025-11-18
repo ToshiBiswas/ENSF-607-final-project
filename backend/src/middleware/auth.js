@@ -7,7 +7,7 @@
  * NOTE: In production, rotate JWT_SECRET and prefer short expirations.
  */
 const jwt = require('jsonwebtoken');
-const { AppError } = require('../utils/errors');
+const { UserRepo } = require('../repositories/UserRepo');
 
 /**
  * @param {object} payload - arbitrary claims (e.g., { userId, email, role })
@@ -23,18 +23,40 @@ function signJwt(payload, opts = {}) {
  * Express middleware that requires a valid Bearer token
  * and attaches the decoded payload to req.user.
  */
-function requireAuth(req, _res, next) {
-  const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
-  if (!token) return next(new AppError('Unauthorized', 401));
+async function requireAuth(req, res, next) {
   try {
-    const secret = process.env.JWT_SECRET || 'changeme';
-    const decoded = jwt.verify(token, secret);
-    req.user = decoded;
+    const auth = req.headers.authorization || '';
+    const [scheme, token] = auth.split(' ');
+
+    if (scheme !== 'Bearer' || !token) {
+      return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Missing bearer token' } });
+    }
+
+    // Verify token
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = payload.sub || payload.userId || payload.id;
+    if (!userId) {
+      return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid token payload' } });
+    }
+
+    // Load user from DB (adjust column/table names to your schema)
+    const user = await UserRepo.findById(userId);
+    if (!user) {
+      return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'User not found' } });
+    }
+
+    req.user = user;                // User domain object
+    req.auth = { token, payload };  // handy if you need claims later
     next();
-  } catch (e) {
-    next(new AppError('Unauthorized', 401));
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: { code: 'TOKEN_EXPIRED', message: 'Token expired' } });
+    }
+    if (err.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid token' } });
+    }
+    next(err);
   }
 }
 
-module.exports = { signJwt, requireAuth };
+module.exports = { requireAuth, signJwt};

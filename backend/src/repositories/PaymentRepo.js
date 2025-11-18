@@ -1,60 +1,103 @@
+// src/repositories/PaymentRepo.js
 /**
  * PaymentRepo
  * Persists and loads local Payment records that mirror provider transactions.
  */
+'use strict';
+
 const { knex } = require('../config/db');
-const { Payment } = require('../domain/Payment');
-const { UserRepo } = require('./UserRepo');
-const { EventRepo } = require('./EventRepo');
-const { TicketInfoRepo } = require('./TicketInfoRepo');
-const { PaymentInfoRepo } = require('./PaymentInfoRepo');
+const { PaymentInfoRepo } = require('../repositories/PaymentInfoRepo');
+
+const PAYMENTS = 'payments';
+const REFUNDS  = 'refunds';
+const PURCHASES = 'purchases';
 
 class PaymentRepo {
-  /** Insert a new payment row inside an existing transaction (trx) */
-  static async insert(trx, { userId, eventId, ticketInfoId, paymentInfoId, amountCents, currency, providerPaymentId, idempotencyKey, status }) {
-    const [payment_id] = await trx('payments').insert({
-      user_id: userId,
-      event_id: eventId || null,
-      ticket_info_id: ticketInfoId || null,
-      payment_info_id: paymentInfoId || null,
+  static async insertPayment(payload, trx = null) {
+    const q = trx || knex;
+    const [id] = await q(PAYMENTS).insert({
+      user_id: payload.userId,
+      payment_info_id: payload.paymentInfoId,
+      amount_cents: payload.amountCents,
+    });
+    return this.findById(id, q);
+  }
+
+  static async findById(paymentId, trx = null) {
+    const q = trx || knex;
+    return q(PAYMENTS).where({ payment_id: paymentId }).first();
+  }
+
+  static async findByPurchaseId(purchaseId, trx = null) {
+    const q = trx || knex;
+    return q(PURCHASES).where({ purchase_id: purchaseId }).first();
+  }
+
+  /**
+   * Insert a purchase row. IMPORTANT: pass the same trx used for tickets
+   * so you don't hit cross-connection locks.
+   */
+  static async insertPurchase(paymentId, ticketId, amountCents, trx = null) {
+    const q = trx || knex;
+    const [id] = await q(PURCHASES).insert({
+      payment_id: paymentId,
+      ticket_id: ticketId,
       amount_cents: amountCents,
-      currency: currency || 'CAD',
-      provider_payment_id: providerPaymentId || null,
-      idempotency_key: idempotencyKey || null,
-      status: status || 'approved'
     });
-    return this.findById(payment_id);
+    return this.findByPurchaseId(id, q);
   }
 
-  /** Update a payment status (e.g., refunded) */
-  static async updateStatus(trx, paymentId, status, extra = {}) {
-    await trx('payments').where({ payment_id: paymentId }).update({ status, ...extra, updated_at: trx.fn.now() });
-    return this.findById(paymentId);
+  /**
+   * Get purchase + payment + paymentInfo for a given ticket.
+   */
+  static async getTicketPurchases(ticketId, trx = null) {
+    const q = trx || knex;
+    const purchase = await q(PURCHASES)
+      .where({ ticket_id: ticketId })
+      .first();
+    if (!purchase) return null;
+
+    const payment = await this.findById(purchase.payment_id, q);
+    if (!payment) return null;
+
+    const paymentInfo = await PaymentInfoRepo.findById(payment.payment_info_id);
+
+    return { purchase, payment, paymentInfo };
   }
 
-  /** Hydrate a Payment domain object with linked references */
-  static async findById(paymentId) {
-    const r = await knex('payments').where({ payment_id: paymentId }).first();
-    if (!r) return null;
-    const [user, evt, tinfo, pinfo] = await Promise.all([
-      UserRepo.findById(r.user_id),
-      r.event_id ? EventRepo.findById(r.event_id) : null,
-      r.ticket_info_id ? TicketInfoRepo.findById(r.ticket_info_id) : null,
-      r.payment_info_id ? PaymentInfoRepo.findById(r.payment_info_id) : null,
-    ]);
-    return new Payment({
-      paymentId: r.payment_id,
-      user, event: evt, ticketInfo: tinfo, paymentInfo: pinfo,
-      amountCents: r.amount_cents, currency: r.currency,
-      status: r.status, refundedCents: r.refunded_cents,
-      providerPaymentId: r.provider_payment_id, idempotencyKey: r.idempotency_key
+  /**
+   * All purchases for an event, joined out so PaymentService.refund can work.
+   * (We treat all purchases as "approved" for now since there's no status column.)
+   */
+  static async listApprovedForEvent(eventId, trx = null) {
+    const q = trx || knex;
+
+    return q(`${PURCHASES} as p`)
+      .join('tickets as t', 't.ticket_id', 'p.ticket_id')
+      .join(`${PAYMENTS} as pay`, 'pay.payment_id', 'p.payment_id')
+      .join('paymentinfo as pi', 'pi.payment_info_id', 'pay.payment_info_id')
+      .select(
+        'p.purchase_id',
+        'p.amount_cents as purchase_amount_cents',
+        'p.ticket_id',
+        't.event_id',
+        'pay.payment_id',
+        'pay.user_id',
+        'pay.amount_cents as payment_amount_cents',
+        'pay.payment_info_id',
+        'pi.account_id',
+      )
+      .where('t.event_id', eventId);
+  }
+
+  static async refund(userId, paymentId, amountCents, trx = null) {
+    const q = trx || knex;
+    const [id] = await q(REFUNDS).insert({
+      user_id: userId,
+      payment_id: paymentId,
+      amount_cents: amountCents,
     });
-  }
-
-  /** All APPROVED payments for a given event (used to mass-refund on cancel) */
-  static async listApprovedForEvent(eventId) {
-    const rows = await knex('payments').where({ event_id: eventId, status: 'approved' });
-    return Promise.all(rows.map(r => this.findById(r.payment_id)));
+    return q(REFUNDS).where({ refund_id: id }).first();
   }
 
   /** List all payments for a user */

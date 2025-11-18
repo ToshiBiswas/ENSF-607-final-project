@@ -7,45 +7,24 @@ exports.up = async function up(knex) {
     t.integer('user_id').unsigned().notNullable()
       .references('user_id').inTable('users').onDelete('CASCADE');
 
-    // Optional context
+    // Use event_name instead of event_id (string, optional)
     t.integer('event_id').unsigned().nullable()
       .references('event_id').inTable('events').onDelete('SET NULL');
+    // Simplified payload: just a title + message
+    t.string('title', 200).notNullable();
+    t.string('message', 1000).notNullable();
 
-    t.integer('payment_id').unsigned().nullable()
-      .references('payment_id').inTable('payments').onDelete('SET NULL');
+    // Scheduling + delivery state
+    t.timestamp('send_at').notNullable().defaultTo(knex.fn.now());
+    t.timestamp('delivered_at').nullable();
 
-    // What happened
-    t.enu('type', [
-      'general',
-      'event_created',
-      'event_updated',
-      'event_canceled',
-      'payment_approved',
-      'payment_declined',
-      'refund_issued'
-    ], { useNative: true, enumName: 'notification_type' })
-    .notNullable()
-    .defaultTo('general');
-
-    t.string('message', 500).notNullable();
-
-    // Delivery & state
-    t.timestamp('sent_at').notNullable().defaultTo(knex.fn.now());
-    t.timestamp('read_at').nullable();
-
-    t.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
-    t.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
-
-    // Helpful indexes
+    // Helpful indexes for common queries
     t.index(['user_id']);
     t.index(['event_id']);
-    t.index(['payment_id']);
-    t.index(['type']);
-    t.index(['created_at']);
+    t.index(['send_at']);
   });
 };
 
 exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('notifications');
-  try { await knex.raw('DROP TYPE IF EXISTS notification_type'); } catch {}
 };

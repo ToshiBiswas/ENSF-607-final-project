@@ -6,4 +6,9 @@ const app = require('./app');
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`API listening on :${port}`);
+
+  // Start the expired-event cleanup scheduler in non-test envs
+  if (process.env.NODE_ENV !== 'test' && app.startExpiredEventCleanupScheduler) {
+    app.startExpiredEventCleanupScheduler();
+  }
 });
