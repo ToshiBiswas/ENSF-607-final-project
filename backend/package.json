@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "node -r dotenv/config src/server.js",
     "start": "node -r dotenv/config src/server.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "rollback": "knex migrate:rollback",
     "migrate": "knex migrate:latest --env development",
     "seed": "knex seed:run --env development"
@@ -16,11 +19,8 @@
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
-<<<<<<< HEAD
     "dayjs": "^1.11.19",
-=======
     "dotenv": "^16.6.1",
->>>>>>> origin/main
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "knex": "^3.1.0",
