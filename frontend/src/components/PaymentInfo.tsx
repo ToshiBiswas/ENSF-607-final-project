@@ -10,7 +10,7 @@ export default function PaymentInfo() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Form state
+  //Form state
   const [formData, setFormData] = useState({
     number: '',
     name: '',
@@ -19,7 +19,7 @@ export default function PaymentInfo() {
     exp_year: '',
   });
 
-  // Fetch payment methods on mount
+  //Fetch payment methods on mount
   useEffect(() => {
     console.log('PaymentInfo component mounted, loading payment methods...');
     loadPaymentMethods();
@@ -36,7 +36,7 @@ export default function PaymentInfo() {
     } catch (err) {
       console.error('Error loading payment methods:', err);
       const apiError = err as ApiError;
-      // Don't show error for 401 - it's expected if not logged in
+      //Dont show error for 401 - its expected if not logged in
       if (apiError.status === 401) {
         setError('Please log in to view your payment methods. Set your token in the browser console: localStorage.setItem("token", "YOUR_TOKEN")');
       } else {
@@ -54,14 +54,14 @@ export default function PaymentInfo() {
       ...prev,
       [name]: value,
     }));
-    // Clear form error when user starts typing
+    //Clear form error when user starts typing
     if (formError) setFormError(null);
   };
 
   const formatCardNumber = (value: string) => {
-    // Remove all non-digits
+    //Remove all non-digits
     const digits = value.replace(/\D/g, '');
-    // Add spaces every 4 digits
+    //Add spaces every 4 digits
     return digits.match(/.{1,4}/g)?.join(' ') || digits;
   };
 
@@ -79,14 +79,14 @@ export default function PaymentInfo() {
     setSubmitting(true);
     setFormError(null);
 
-    // Validate form
+    //Validate form
     if (!formData.number || !formData.name || !formData.ccv || !formData.exp_month || !formData.exp_year) {
       setFormError('All fields are required');
       setSubmitting(false);
       return;
     }
 
-    // Clean card number (remove spaces)
+    //Clean card number (remove spaces)
     const cleanNumber = formData.number.replace(/\s/g, '');
 
     try {
@@ -98,7 +98,7 @@ export default function PaymentInfo() {
         exp_year: parseInt(formData.exp_year, 10),
       });
 
-      // Success - reload payment methods and reset form
+      //Success - reload payment methods and reset form
       await loadPaymentMethods();
       setFormData({
         number: '',
@@ -112,7 +112,7 @@ export default function PaymentInfo() {
       const apiError = err as ApiError;
       let errorMessage = apiError.message || 'Failed to add payment method';
 
-      // Handle specific error codes
+      //Handle specific error codes
       switch (apiError.code) {
         case 'CARD_EXPIRED':
           errorMessage = 'This card has expired. Please use a valid card.';

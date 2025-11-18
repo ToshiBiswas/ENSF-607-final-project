@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { cartApi, paymentApi } from '../utils/api';
 import type { Cart, PaymentMethod, CheckoutRequest, ApiError } from '../utils/api';
 
-interface CheckoutProps {
-  onNavigate?: (page: 'payment' | 'cart' | 'checkout' | 'ai') => void;
-}
-
-export default function Checkout({ onNavigate }: CheckoutProps) {
+export default function Checkout() {
+  const navigate = useNavigate();
   //state for cart and payment methods
   const [cart, setCart] = useState<Cart | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -203,7 +201,7 @@ export default function Checkout({ onNavigate }: CheckoutProps) {
               </div>
 
               <button
-                onClick={() => onNavigate?.('cart')} //navigate to cart page
+                onClick={() => navigate('/cart')} //navigate to cart page
                 className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
               >
                 Back to Cart
@@ -228,7 +226,7 @@ export default function Checkout({ onNavigate }: CheckoutProps) {
               <p className="text-lg mb-2">Your cart is empty</p>
               <p className="text-sm mb-4">Add some tickets to your cart before checkout.</p>
               <button
-                onClick={() => onNavigate?.('cart')} //navigate to cart page
+                onClick={() => navigate('/cart')} //navigate to cart page
                 className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
               >
                 View Cart

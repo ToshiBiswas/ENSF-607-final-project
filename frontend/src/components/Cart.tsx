@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { cartApi } from '../utils/api';
 import type { Cart, CartItem, ApiError } from '../utils/api';
 
-interface CartProps {
-  onNavigate?: (page: 'payment' | 'cart' | 'checkout' | 'ai') => void;
-}
-
-export default function Cart({ onNavigate }: CartProps) {
+export default function Cart() {
+  const navigate = useNavigate();
   //state to store cart data
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(true);
@@ -186,7 +184,7 @@ export default function Cart({ onNavigate }: CartProps) {
                   <span className="text-2xl font-bold text-gray-900">${formatPrice(totalCents)}</span>
                 </div>
                 <button
-                  onClick={() => onNavigate?.('checkout')} //navigate to checkout page
+                  onClick={() => navigate('/checkout')} //navigate to checkout page
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
                 >
                   Proceed to Checkout

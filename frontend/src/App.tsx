@@ -11,6 +11,7 @@ import Navbar from "./components/Navbar";
 import Cart from "./components/Cart";
 import Checkout from "./components/Checkout";
 import AIAdvice from "./components/AIAdvice";
+import PaymentInfo from "./components/PaymentInfo";
 
 function App() {
   return (
@@ -33,10 +34,11 @@ function App() {
             <Route path="TransactionHistory" element={<TransactionHistory />} />
           </Route>
 
-          {/* Cart, Checkout, and AI Advice routes */}
+          {/* Cart, Checkout, AI Advice, and Payment Info routes */}
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/ai-advice" element={<AIAdvice />} />
+          <Route path="/payment-info" element={<PaymentInfo />} />
         </Routes>
       </Router>
     </AuthProvider>

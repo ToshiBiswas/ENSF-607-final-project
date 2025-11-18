@@ -1,4 +1,4 @@
-// API client utility for making authenticated requests
+//API client utility for making authenticated requests
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export interface ApiError {
@@ -33,7 +33,7 @@ export async function apiRequest<T>(
   try {
     data = await response.json();
   } catch (e) {
-    // If response is not JSON, create error from status
+    //If response is not JSON, create error from status
     const error: ApiError = {
       message: response.status === 401 
         ? 'Authentication required. Please log in.' 
@@ -44,7 +44,7 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok) {
-    // Backend returns { error: message, code, ...extra }
+    //Backend returns { error: message, code, ...extra }
     const error: ApiError = {
       message: data.error || data.message || 'An error occurred',
       code: data.code,
@@ -58,7 +58,7 @@ export async function apiRequest<T>(
   return data;
 }
 
-// Payment method types
+//Payment method types
 export interface PaymentMethod {
   paymentInfoId: number;
   accountId: string;
@@ -85,7 +85,7 @@ export interface VerifyCardResponse {
   paymentMethod: PaymentMethod;
 }
 
-// Cart types
+//Cart types
 export interface CartItem {
   cart_item_id: number;
   info_id: number;
@@ -114,7 +114,7 @@ export interface UpdateCartItemRequest {
   quantity: number;
 }
 
-// Checkout types
+//Checkout types
 export interface CheckoutRequest {
   usePaymentInfoId?: number;
   newCard?: {
@@ -130,7 +130,7 @@ export interface CheckoutResponse {
   tickets: string[];
 }
 
-// AI Advice types
+//AI Advice types
 export interface EventAdviceRequest {
   eventType?: string;
   budget?: string;
@@ -164,7 +164,7 @@ export interface StyleAdviceResponse {
   tips?: string;
 }
 
-// API functions
+//API functions
 export const paymentApi = {
   getPaymentMethods: (): Promise<PaymentMethodsResponse> =>
     apiRequest<PaymentMethodsResponse>('/me/payment-methods'),
