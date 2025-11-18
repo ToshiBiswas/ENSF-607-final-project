@@ -40,6 +40,12 @@ app.use(cors({
   credentials: true,                 // allow cookies
 }));
 
+// CORS configuration
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+}));
+
 // JSON body parsing
 app.use(express.json());
 app.use(cookieParser());

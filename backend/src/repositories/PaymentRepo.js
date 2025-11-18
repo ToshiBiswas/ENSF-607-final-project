@@ -114,6 +114,12 @@ class PaymentRepo {
     });
     return q(REFUNDS).where({ refund_id: id }).first();
   }
+
+  /** List all payments for a user */
+  static async listForUser(userId) {
+    const rows = await knex('payments').where({ user_id: userId }).orderBy('created_at', 'desc');
+    return Promise.all(rows.map(r => this.findById(r.payment_id)));
+  }
 }
 
 module.exports = { PaymentRepo };

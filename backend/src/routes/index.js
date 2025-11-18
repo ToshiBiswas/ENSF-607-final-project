@@ -4,6 +4,7 @@
  */
 const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
+const ticketsRoutes = require('./tickets.routes');
 
 const { AuthController } = require('../controllers/AuthController');
 const { EventsController } = require('../controllers/EventsController');
@@ -35,6 +36,7 @@ r.get('/categories',CategoryController.categories)
 
 /* ---------- USER ---------- */
 r.get('/me', requireAuth, UsersController.me);
+r.get('/auth/me', requireAuth, UsersController.me); 
 r.patch('/me', requireAuth, UsersController.updateProfile);
 r.get('/me/payment-methods', requireAuth, UsersController.paymentMethods);
 /* ---------- CART ---------- */

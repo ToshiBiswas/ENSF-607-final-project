@@ -26,6 +26,12 @@ class AuthController {
    */
   static register = asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+      throw new AppError('Name, email, and password are required', 400, { code: 'MISSING_FIELDS' });
+    }
+    if (typeof password !== 'string' || password.length < 6) {
+      throw new AppError('Password must be at least 6 characters', 400, { code: 'WEAK_PASSWORD' });
+    }
 
     // 1) check if email exists
     const existing = await UserRepo.findByEmail(email);
@@ -55,14 +61,17 @@ class AuthController {
       user,
     });
   });
-
+  
+  
   /**
    * POST /api/auth/login
    * Body: { email, password }
    */
   static login = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
-
+    if (!email || !password) {
+      throw new AppError('Email and password are required', 400, { code: 'MISSING_FIELDS' });
+    }
     const row = await UserRepo.findAuthByEmail(email);
     if (!row) {
       return res.status(401).json({
@@ -184,6 +193,7 @@ class AuthController {
 
     res.json({ success: true });
   });
+
 }
 
 module.exports = { AuthController };

@@ -1,0 +1,204 @@
+.my-info-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 3rem 1rem 5rem;
+    color: #f7f8ff;
+  }
+  
+  .my-info-page__header {
+    margin-bottom: 2.5rem;
+  }
+  
+  .my-info-page__header h1 {
+    margin: 0 0 0.5rem;
+    font-size: clamp(2.5rem, 5vw, 3.5rem);
+    background: linear-gradient(135deg, #7f5af0, #2cb67d);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .my-info-page__subtitle {
+    margin: 0;
+    color: #a9b3d9;
+    font-size: 1rem;
+  }
+  
+  .my-info-page__loading,
+  .my-info-page__error {
+    text-align: center;
+    padding: 4rem 2rem;
+    font-size: 1.1rem;
+  }
+  
+  .my-info-page__error {
+    color: #ff6b6b;
+  }
+  
+  .my-info-page__error-banner {
+    background: rgba(255, 107, 107, 0.15);
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    color: #ff6b6b;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .info-card {
+    background: rgba(11, 16, 29, 0.85);
+    border-radius: 1.4rem;
+    padding: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  
+  .info-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  
+  .info-card__header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #f7f8ff;
+  }
+  
+  .info-card__edit-btn {
+    border: none;
+    background: rgba(127, 90, 240, 0.2);
+    color: #7f5af0;
+    padding: 0.5rem 1.2rem;
+    border-radius: 999px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid rgba(127, 90, 240, 0.3);
+  }
+  
+  .info-card__edit-btn:hover {
+    background: rgba(127, 90, 240, 0.3);
+    border-color: rgba(127, 90, 240, 0.5);
+  }
+  
+  .info-card__content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  }
+  
+  .info-row:last-child {
+    border-bottom: none;
+  }
+  
+  .info-row__label {
+    font-size: 0.9rem;
+    color: #a9b3d9;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+  }
+  
+  .info-row__value {
+    font-size: 1rem;
+    color: #f7f8ff;
+    font-weight: 500;
+  }
+  
+  .info-card__form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .form-group label {
+    font-size: 0.9rem;
+    color: #c9d2f3;
+    font-weight: 500;
+  }
+  
+  .form-input {
+    background: rgba(14, 20, 37, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    color: #f7f8ff;
+    font-size: 1rem;
+    transition: all 0.2s;
+  }
+  
+  .form-input:focus {
+    outline: none;
+    border-color: #7f5af0;
+    box-shadow: 0 0 0 3px rgba(127, 90, 240, 0.2);
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+  
+  .form-button {
+    border: none;
+    padding: 0.65rem 1.6rem;
+    border-radius: 999px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+  }
+  
+  .form-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .form-button--primary {
+    background: linear-gradient(135deg, #7f5af0, #2cb67d);
+    color: #05060a;
+  }
+  
+  .form-button--primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(127, 90, 240, 0.4);
+  }
+  
+  .form-button--secondary {
+    background: rgba(14, 20, 37, 0.8);
+    color: #f7f8ff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .form-button--secondary:hover:not(:disabled) {
+    background: rgba(14, 20, 37, 1);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+  
+  @media (max-width: 768px) {
+    .info-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+  
+    .form-actions {
+      flex-direction: column;
+    }
+  }
