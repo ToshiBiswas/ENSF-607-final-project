@@ -28,6 +28,8 @@
 require('dotenv').config();
 const express = require('express');
 const morgan = require('morgan');
+const { EventRepo } = require('./repositories/EventRepo');
+const { EventService } = require('./services/EventService');
 
 // Central route registry
 const routes = require('./routes');
@@ -58,7 +60,33 @@ app.use(errorMiddleware);
 // Allow "node src/app.js" to boot a server; otherwise export for tests
 if (require.main === module) {
   const port = process.env.PORT || 3000;
-  app.listen(port, () => console.log(`API listening on :${port}`));
+  app.listen(port, () => {
+    console.log(`API listening on :${port}`);
+    if (process.env.NODE_ENV !== 'test') {
+      startExpiredEventCleanupScheduler();
+    }
+  });
+}
+function startExpiredEventCleanupScheduler() {
+  const INTERVAL_MS = 6 * 1000; // 1 minute
+  console.log('started Expired Events')
+  setInterval(async () => {
+    try {
+      // Call your real cleanup method here:
+      // adjust the method name to whatever you actually implemented.
+      const deleted = await EventService.settleAndDeleteExpiredEvents();
+
+      if (deleted > 0) {
+        console.log(`[scheduler] Deleted ${deleted} expired event(s).`);
+      } else {
+        console.log('[scheduler] No deleted expired events.');
+      }
+    } catch (err) {
+      console.error('[scheduler] Error deleting expired events:', err);
+    }
+  }, INTERVAL_MS);
 }
 
+
 module.exports = app;
+module.exports.startExpiredEventCleanupScheduler = startExpiredEventCleanupScheduler;

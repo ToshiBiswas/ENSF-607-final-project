@@ -1,5 +1,6 @@
 
 const { CategoryRepo } = require("../repositories/CategoryRepo");
+const { CategoryService } = require("../services/CategoryServices");
 const asyncHandler = require('../utils/handler');
 
 class CategoryController {
@@ -9,7 +10,7 @@ class CategoryController {
    * List every available category.
    */
   static categories = asyncHandler(async (req, res) => {
-    const evt = await CategoryRepo.getAll();
+    const evt = await CategoryService.getAll();
     if (!evt) return res.status(404).json({ error: 'Not found' });
     res.json({ ...evt});
   });

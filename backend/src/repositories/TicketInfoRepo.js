@@ -8,9 +8,12 @@ const { TicketInfo } = require('../domain/TicketInfo');
 
 class TicketInfoRepo {
   static rowToDomain(r) {
+    console.log(r);
     return new TicketInfo({
+      
       infoId: r.info_id,
-      event: null,
+      
+      event: r.event_id,
       type: r.ticket_type,
       price: r.ticket_price,
       quantity: r.tickets_quantity,
@@ -24,32 +27,43 @@ class TicketInfoRepo {
   }
 
   /**
-   * Previously locked the row with FOR UPDATE. Now it just reads it.
-   * Callers can still pass a trx; we simply use it if provided.
+   * Lock the ticketinfo row for update inside a transaction.
+   * The row stays locked until the trx commits/rolls back.
    */
   static async lockAndLoad(trx, infoId) {
-    const q = trx || knex;
-    const r = await q('ticketinfo').where({ info_id: infoId }).first(); // <-- no .forUpdate()
+    if (!trx) {
+      throw new Error('TicketInfoRepo.lockAndLoad requires a transaction');
+    }
+
+    const r = await trx('ticketinfo')
+      .where({ info_id: infoId })
+      .forUpdate()     // <-- row-level lock
+      .first();
+
     if (!r) return null;
     return { row: r, domain: this.rowToDomain(r) };
   }
 
-  /** Decrement tickets_left by qty (no explicit locks) */
   static async decrementLeft(trx, infoId, qty) {
-    const q = trx || knex;
-    await q('ticketinfo')
+    if (!trx) {
+      throw new Error('TicketInfoRepo.decrementLeft requires a transaction');
+    }
+
+    await trx('ticketinfo')
       .where({ info_id: infoId })
       .decrement('tickets_left', qty)
-      .update({ updated_at: q.fn.now() });
+      .update({ updated_at: trx.fn.now() });
   }
 
-  /** Increment tickets_left by qty (no explicit locks) */
   static async incrementLeft(trx, infoId, qty) {
-    const q = trx || knex;
-    await q('ticketinfo')
+    if (!trx) {
+      throw new Error('TicketInfoRepo.incrementLeft requires a transaction');
+    }
+
+    await trx('ticketinfo')
       .where({ info_id: infoId })
       .increment('tickets_left', qty)
-      .update({ updated_at: q.fn.now() });
+      .update({ updated_at: trx.fn.now() });
   }
 }
 

@@ -20,15 +20,10 @@ class UsersController {
     res.json({ user });
   });
 
-  /** PUT /api/me/preferences  (location + preferred category) */
-  static setPreferences = asyncHandler(async (req, res) => {
-    const pref = await UserService.setPreferences(req.user.userId, req.body);
-    res.json({ preferences: pref });
-  });
-
   /** GET /api/me/payment-methods  (list stored cards) */
   static paymentMethods = asyncHandler(async (req, res) => {
     const list = await UserCardRepo.listForUser(req.user.userId);
+    
     res.json({ paymentMethods: list });
   });
 }

@@ -12,8 +12,8 @@ const { UsersController } = require('../controllers/UsersController');
 const { CartController } = require('../controllers/CartController');
 const { PaymentsController } = require('../controllers/PaymentsController');
 const { NotificationController } = require('../controllers/NotificationController'); // <-- NEW
+const { TicketsController } = require('../controllers/TicketsController');
 const { CategoryController } = require('../controllers/CategoryController');
-
 const r = Router();
 
 /* ---------- AUTH ---------- */
@@ -36,7 +36,6 @@ r.get('/me', requireAuth, UsersController.me);
 r.get('/auth/me', requireAuth, UsersController.me); 
 r.patch('/me', requireAuth, UsersController.updateProfile);
 r.get('/me/payment-methods', requireAuth, UsersController.paymentMethods);
-r.put('/me/preferences', requireAuth, UsersController.setPreferences);
 /* ---------- CART ---------- */
 r.post('/cart/items', requireAuth, CartController.add);
 r.get('/cart', requireAuth, CartController.view);
@@ -46,11 +45,7 @@ r.post('/cart/checkout', requireAuth, CartController.checkout);
 
 /* ---------- PAYMENTS ---------- */
 r.post('/payments/verify-card', requireAuth, PaymentsController.verifyCard);
-r.post('/payments/refund', requireAuth, PaymentsController.refund);
-r.get('/payments/history', requireAuth, PaymentsController.getHistory);
-
-/* ---------- TICKETS ---------- */
-r.use('/tickets', ticketsRoutes);
+r.delete('/me/payment-methods/:paymentInfoId', requireAuth, PaymentsController.deletePaymentMethod);
 
 /* ---------- NOTIFICATIONS ---------- */
 // Processes and sends all pending notifications due as of "now"
@@ -58,5 +53,8 @@ r.get('/notifications/due', requireAuth, NotificationController.getDue);
 
 // Create/schedule a new notification for an event (requires body.eventId)
 r.post('/notifications', requireAuth, NotificationController.create);
-
+/* ---------- TICKETS ---------- */
+r.get('/me/tickets', requireAuth, TicketsController.getMyTickets);
+r.get('/tickets/:id',requireAuth, TicketsController.getTicketById)
+r.get('/events/:eventId/tickets/validate',requireAuth,TicketsController.validateForEvent)
 module.exports = r;

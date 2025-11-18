@@ -28,6 +28,18 @@ class CategoryRepo {
       value: r.category_value,
     }));
   }
+    /**
+   * Check if a category exists by its value.
+   * @param {string} value - The category value to look for.
+   * @returns {Promise<boolean>} true if it exists, false otherwise.
+   */
+  static async existsByValue(value) {
+    const row = await knex('categoriesid')
+      .where({ category_value: value })
+      .first();
+
+    return !!row; // convert to true/false
+  }
 }
 
 
