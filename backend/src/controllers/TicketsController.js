@@ -3,7 +3,7 @@ const asyncHandler = require('../utils/handler');
 const { TicketingService } = require('../services/TicketingService');
 
 class TicketsController {
-  // GET /api/tickets  (authenticated user’s tickets)
+  // GET /api/tickets?page=...  (authenticated user’s tickets)
   static async getMyTickets(req, res) {
     const result = await TicketingService.getMyTickets(req.user, req.query);
     res.json({ message: 'Get tickets: successful', ...result });
@@ -19,7 +19,9 @@ class TicketsController {
   /** GET /api/events/:eventId/tickets/validate?code=... (auth required) */
   static validateForEvent = asyncHandler(async (req, res) => {
     const eventId = req.params.eventId;
+    console.log(req.query,'\n',req.body);
     const code = req.query.code ?? req.body?.code ?? '';
+    console.log(code)
     const result = await TicketingService.validateTicket({
       currentUser: req.user,   // <-- ensure we pass the caller
       eventId,

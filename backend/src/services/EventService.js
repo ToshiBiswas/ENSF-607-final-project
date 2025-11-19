@@ -227,6 +227,53 @@ class EventService {
 
     return EventRepo.findById(eventId);
   }
+    /**
+   * List events for a given category value, with pagination.
+   * - If `categoryValue` is empty/blank/undefined → list ALL events (paginated).
+   * - Otherwise: ensure the category exists, then list events in that category.
+   *
+   * @param {string} categoryValue
+   * @param {object} query  { page?, pageSize? }
+   * @returns {Promise<{page:number, pageSize:number, total:number, events: Event[]}>}
+   */
+  static async listByCategoryPaginized(categoryValue, query = {}) {
+    // Same paging pattern as TicketingService.getMyTickets
+    const page = Math.max(parseInt(query?.page || '1', 10), 1);
+    const pageSize = Math.min(
+      Math.max(parseInt(query?.pageSize || '10', 10), 1),
+      100
+    );
+
+    const value = String(categoryValue ?? '').trim();
+
+    let rows;
+    let total;
+
+    if (!value) {
+      // No category provided → return ALL events, paginated
+      ({ total, rows } = await EventRepo.listAllPaginated({ page, pageSize }));
+    } else {
+      // Ensure the category exists (no auto-create)
+      const cats = await EventRepo.getCategoriesByValues([value]);
+      if (!cats.length) {
+        throw new AppError(`Category not found: ${value}`, 404, {
+          code: 'CATEGORY_NOT_FOUND',
+          value,
+        });
+      }
+
+      ({ total, rows } = await EventRepo.listByCategoryValuePaginated(value, {
+        page,
+        pageSize,
+      }));
+    }
+
+    // Hydrate into Event domain objects (with organizer, categories, tickets)
+    const events = await Promise.all(rows.map((r) => EventRepo.toDomain(r)));
+
+    return { page, pageSize, total, events };
+  }
+
   /** 
    * Delete event:
    *  - Refund all approved payments for the event using PaymentService
