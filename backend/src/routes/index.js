@@ -22,7 +22,7 @@ r.post('/auth/logout', AuthController.logout);
 r.post('/auth/logout-all', requireAuth, AuthController.logoutAll);
 
 /* ---------- EVENTS ---------- */
-r.get('/events', EventsController.listByCategory); // ?category=Music
+r.get('/events', EventsController.listByCategoryPaginized); // ?category=Music
 r.get('/events/:id', EventsController.get);
 r.post('/events', requireAuth, EventsController.create);
 r.patch('/events/:id', requireAuth, EventsController.update);
