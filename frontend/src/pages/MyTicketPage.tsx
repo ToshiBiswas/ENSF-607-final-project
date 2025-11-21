@@ -53,8 +53,16 @@ export function MyTicketPage() {
           params.append('upcoming', 'true');
         }
 
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          throw new Error('Please log in to view your tickets');
+        }
+
         const res = await fetch(`${API_BASE_URL}/tickets?${params.toString()}`, {
-          credentials: 'include', // Include cookies for authentication
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
         });
 
         if (!res.ok) {

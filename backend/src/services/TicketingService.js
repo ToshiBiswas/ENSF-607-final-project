@@ -9,6 +9,7 @@ const crypto = require('crypto');
  *  - Emit notifications on success
  */
 const { knex } = require('../config/db');
+const db = knex;
 const { AppError } = require('../utils/errors');
 const { TicketInfoRepo } = require('../repositories/TicketInfoRepo');
 const { EventRepo } = require('../repositories/EventRepo');
