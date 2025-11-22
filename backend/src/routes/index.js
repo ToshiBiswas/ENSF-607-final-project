@@ -3,24 +3,26 @@
  * Groups endpoints by controller and applies auth where required.
  */
 const { Router } = require('express');
-const { requireAuth } = require('../middleware/auth');
-
+const { requireAuth } = require('../utils/jwt');
 const { AuthController } = require('../controllers/AuthController');
 const { EventsController } = require('../controllers/EventsController');
 const { UsersController } = require('../controllers/UsersController');
 const { CartController } = require('../controllers/CartController');
 const { PaymentsController } = require('../controllers/PaymentsController');
-const { NotificationController } = require('../controllers/NotificationController'); // <-- NEW
+const { NotificationController } = require('../controllers/NotificationController');
 const { TicketsController } = require('../controllers/TicketsController');
 const { CategoryController } = require('../controllers/CategoryController');
 const r = Router();
 
 /* ---------- AUTH ---------- */
 r.post('/auth/register', AuthController.register);
-r.post('/auth/login',    AuthController.login);
+r.post('/auth/login', AuthController.login);
+r.post('/auth/refresh', AuthController.refresh);
+r.post('/auth/logout', AuthController.logout);
+r.post('/auth/logout-all', requireAuth, AuthController.logoutAll);
 
 /* ---------- EVENTS ---------- */
-r.get('/events', EventsController.listByCategory); // ?category=Music
+r.get('/events', EventsController.listByCategoryPaginized); // ?category=Music
 r.get('/events/:id', EventsController.get);
 r.post('/events', requireAuth, EventsController.create);
 r.patch('/events/:id', requireAuth, EventsController.update);
@@ -32,8 +34,11 @@ r.get('/categories',CategoryController.categories)
 
 /* ---------- USER ---------- */
 r.get('/me', requireAuth, UsersController.me);
+r.get('/auth/me', requireAuth, UsersController.me); 
 r.patch('/me', requireAuth, UsersController.updateProfile);
 r.get('/me/payment-methods', requireAuth, UsersController.paymentMethods);
+r.put('/me/preferences', requireAuth, UsersController.setPreferences);
+    
 /* ---------- CART ---------- */
 r.post('/cart/items', requireAuth, CartController.add);
 r.get('/cart', requireAuth, CartController.view);
@@ -44,6 +49,7 @@ r.post('/cart/checkout', requireAuth, CartController.checkout);
 /* ---------- PAYMENTS ---------- */
 r.post('/payments/verify-card', requireAuth, PaymentsController.verifyCard);
 r.delete('/me/payment-methods/:paymentInfoId', requireAuth, PaymentsController.deletePaymentMethod);
+r.get('/payments', requireAuth, PaymentsController.listMyPayments);
 
 /* ---------- NOTIFICATIONS ---------- */
 // Processes and sends all pending notifications due as of "now"

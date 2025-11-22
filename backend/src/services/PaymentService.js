@@ -178,7 +178,15 @@ class PaymentService {
 
     return { ...rec, paymentId };
   }
-
+    /**
+   * returns all the payments made by a userId
+   *
+   * @param
+   * 
+   */
+  static async listPaymentsForUser(userId) {
+    return PaymentRepo.findByUserId(userId);
+  }
   /**
    * Refund a single purchase row returned from PaymentRepo.listApprovedForEvent.
    *
@@ -273,3 +281,4 @@ class PaymentService {
 }
 
 module.exports = { PaymentService };
+ 

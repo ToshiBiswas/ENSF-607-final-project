@@ -76,15 +76,37 @@ class EventsController {
     const result = await EventService.deleteEvent(organizerId, Number(req.params.id));
     res.json(result);
   });
+  /**
+   * GET /api/events?category=Music&page=1&pageSize=10
+   * - If category is provided → events in that category (paginated)
+   * - If category is empty/missing → all events (paginated)
+   */
+  static listByCategoryPaginized = asyncHandler(async (req, res) => {
+    const { category } = req.query;
+
+    // Service now returns { page, pageSize, total, events }
+    const result = await EventService.listByCategoryPaginized(category, req.query);
+    const { page, pageSize, total, events } = result;
+
+    // Shape organizer like before (just the name string)
+    for (let i = 0; i < events.length; i++) {
+      if (events[i].organizer && events[i].organizer.name) {
+        events[i].organizer = events[i].organizer.name;
+      }
+    }
+
+    res.json({ page, pageSize, total, events });
+  });
 
   /**
    * GET /api/events/:id/tickets
    * List ticket types (price/quantity/left) for an event.
    */
   static ticketTypes = asyncHandler(async (req, res) => {
-    const evt = await EventRepo.findById(Number(req.params.id));
-    if (!evt) return res.status(404).json({ error: 'Not found' });
-    res.json({ ticketTypes: evt.tickets });
+    const eventId = Number(req.params.id);
+    const event = await EventRepo.findById(Number(req.params.id));
+    if (!event) return res.status(404).json({ error: 'Not found' });
+    res.json({ ticketTypes: event.tickets });
   });
 }
 

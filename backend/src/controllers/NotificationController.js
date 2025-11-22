@@ -43,6 +43,7 @@ class NotificationController {
 
     res.status(201).json({ notification: note });
   });
+  
 }
 
 module.exports = { NotificationController };

@@ -1,13 +1,20 @@
+// src/context/AuthContext.tsx
 /**
  * Authentication Context
  * Provides authentication state and methods throughout the app
  */
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authApi, User } from '../api/auth';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+} from 'react';
+import type { ReactNode } from 'react';
+import { authApi, type User } from '../api/auth';
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
+  token: string | null; // access token only
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
@@ -17,61 +24,68 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
 interface AuthProviderProps {
   children: ReactNode;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null); // access token
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored token on mount
     const loadUser = async () => {
-      const storedToken = localStorage.getItem('token');
-      if (storedToken) {
-        setToken(storedToken);
-        // Try to fetch user data to verify token
-        try {
-          const { usersApi } = await import('../api/users');
-          const userData = await usersApi.getMe();
-          setUser(userData);
-        } catch (err) {
-          // Token might be invalid, clear it
-          console.error('Failed to load user:', err);
-          localStorage.removeItem('token');
-          setToken(null);
-        }
+      try {
+        // Try to load the current user.
+        // apiClient inside usersApi will:
+        //  - send Authorization header if token exists
+        //  - on 401, call /auth/refresh (cookie-based) and retry
+        const { usersApi } = await import('../api/users');
+        const userData = await usersApi.getMe();
+        setUser(userData);
+
+        // apiClient.refresh will have stored the new access token in localStorage
+        const storedAccessToken = localStorage.getItem('token');
+        setToken(storedAccessToken);
+      } catch (err) {
+        console.error('Failed to load user:', err);
+        setUser(null);
+        setToken(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
+
     loadUser();
   }, []);
 
   const login = async (email: string, password: string) => {
     const response = await authApi.login({ email, password });
-    setToken(response.token);
+
+    // response now only has { accessToken, user }
+    setToken(response.accessToken);
     setUser(response.user);
-    localStorage.setItem('token', response.token);
+
+    localStorage.setItem('token', response.accessToken);
+    // refresh token is in HttpOnly cookie — NOT stored here
   };
 
   const register = async (name: string, email: string, password: string) => {
     const response = await authApi.register({ name, email, password });
-    setToken(response.token);
+
+    setToken(response.accessToken);
     setUser(response.user);
-    localStorage.setItem('token', response.token);
+
+    localStorage.setItem('token', response.accessToken);
+    // refresh token is in HttpOnly cookie — NOT stored here
   };
 
   const logout = () => {
+    // Best-effort logout on backend to clear cookie + revoke refresh token
+    authApi.logout().catch((err) => {
+      console.error('Logout failed:', err);
+    });
+
     setToken(null);
     setUser(null);
     localStorage.removeItem('token');
@@ -90,3 +104,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

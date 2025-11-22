@@ -22,14 +22,16 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const token = localStorage.getItem('token');
-    
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    };
 
+    // Start from any existing headers and normalize to a Headers object
+    const headers = new Headers(options.headers || {});
+
+    // Always make sure we send JSON
+    headers.set('Content-Type', 'application/json');
+
+    // Add Authorization if we have a token
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers.set('Authorization', `Bearer ${token}`);
     }
 
     const response = await fetch(`${this.baseURL}${endpoint}`, {
@@ -44,8 +46,9 @@ class ApiClient {
       throw new Error(error.error || error.message || 'Request failed');
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   }
+
 
   async get<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'GET' });

@@ -14,6 +14,21 @@ class TicketMintRepo {
    */
   static async findByCodeForEvent(eventId, code, trx = null) {
     const q = trx || knex;
+
+    const cleanEventId = Number(eventId);
+    const cleanCode = String(code).trim();
+
+    // Guard against bad inputs
+    if (!Number.isInteger(cleanEventId) || !cleanCode) {
+      console.warn('[TicketRepo.findByCodeForEvent] bad inputs', {
+        eventId,
+        cleanEventId,
+        code,
+        cleanCode,
+      });
+      return null;
+    }
+
     const row = await q('tickets as t')
       .leftJoin('ticketinfo as ti', 'ti.info_id', 't.info_id')
       .leftJoin('events as e', 'e.event_id', 't.event_id')
@@ -34,10 +49,21 @@ class TicketMintRepo {
         'ti.ticket_type',
         'ti.ticket_price'
       )
-      .where('t.event_id', Number(eventId))
-      .andWhere('t.code', String(code))
+      .where({
+        't.event_id': cleanEventId,
+        't.code': cleanCode,
+      })
       .first();
 
+    console.log('[TicketRepo.findByCodeForEvent] inputs', {
+      eventId,
+      cleanEventId,
+      code,
+      cleanCode,
+    });
+    console.log('[TicketRepo.findByCodeForEvent] row', row);
+
+    // row will be `undefined` if query matched nothing → method returns null
     return row || null;
   }
 

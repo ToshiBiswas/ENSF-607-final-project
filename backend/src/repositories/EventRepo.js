@@ -171,6 +171,52 @@ static async toDomain(row) {
   }
 
   /**
+   * Paginated list of events for a specific category value.
+   * Returns raw rows from `events` plus a total count.
+   */
+  static async listByCategoryValuePaginated(value, { page, pageSize }) {
+    const base = knex('events as e')
+      .join('eventscategories as ec', 'e.event_id', 'ec.event_id')
+      .join('categoriesid as c', 'c.category_id', 'ec.category_id')
+      .where('c.category_value', value);
+
+    const [{ count }] = await base
+      .clone()
+      .clearSelect()
+      .clearOrder()
+      .count({ count: '*' });
+
+    const rows = await base
+      .select('e.*')
+      .orderBy('e.event_id', 'desc') // or start_time if you prefer
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+
+    return { total: Number(count || 0), rows };
+  }
+
+  /**
+   * Paginated list of ALL events (no category filter).
+   */
+  static async listAllPaginated({ page, pageSize }) {
+    const base = knex('events as e');
+
+    const [{ count }] = await base
+      .clone()
+      .clearSelect()
+      .clearOrder()
+      .count({ count: '*' });
+
+    const rows = await base
+      .select('e.*')
+      .orderBy('e.event_id', 'desc')
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+
+    return { total: Number(count || 0), rows };
+  }
+
+  /**
    * Replace all categories for an event atomically with the given IDs.
    * Never creates categories; caller must pass valid category_ids.
    */
@@ -234,26 +280,33 @@ static async toDomain(row) {
       } catch (_) {
         /* ignore */
       }
-
-      if (hasTicketsTable) {
-        await trx('tickets').where({ event_id: eventId }).del();
-      }
-      if (!otherLink) {
+      const row = await knex('events')
+        .where({ event_id: eventId})
+        .first()
+        .select('event_id as eventId', 
+          ' payment_info_id as pinfoId'
+        );
+      const exists= await trx('user_cards')
+        .where({ payment_info_id: row.pinfoId })
+        .first();
+      if (!exists) {
         const usedInPayments = await trx('payments')
-          .where({ payment_info_id: pid })
+          .where({ payment_info_id: row.pinfoId })
           .first();
         const usedInEvents = await trx('events')
-          .where({payment_info_id: pid})
+          .where({payment_info_id: row.pinfoId})
           .first()
         if (!(usedInPayments || usedInEvents)) {
           await trx('paymentinfo')
-            .where({ payment_info_id: pid })
+            .where({ payment_info_id: row.pinfoId })
             .del();
         }
       }
       // Delete ticket types for this event
       await trx('ticketinfo').where({ event_id: eventId }).del();
-
+      if (hasTicketsTable) {
+        await trx('tickets').where({ event_id: eventId }).del();
+      }
       // Finally delete the event row
       await trx('events').where({ event_id: eventId }).del();
 

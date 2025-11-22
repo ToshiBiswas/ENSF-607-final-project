@@ -13,6 +13,21 @@ const REFUNDS  = 'refunds';
 const PURCHASES = 'purchases';
 
 class PaymentRepo {
+  static async findByUserId(userId) {
+    const rows = await knex(PAYMENTS)
+      .where({ user_id: userId })
+      .orderBy('created_at', 'desc');
+
+    return rows.map((row) => ({
+      paymentId: row.payment_id,
+      userId: row.user_id,
+      paymentInfoId: row.payment_info_id,
+      amountCents: row.amount_cents,
+      currency: row.currency,
+      createdAt: row.created_at,
+    }));
+  }
+
   static async insertPayment(payload, trx = null) {
     const q = trx || knex;
     const [id] = await q(PAYMENTS).insert({

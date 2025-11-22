@@ -11,6 +11,7 @@ const crypto = require('crypto');
  *  - Emit notifications on success
  */
 const { knex } = require('../config/db');
+const db = knex;
 const { AppError } = require('../utils/errors');
 const { TicketInfoRepo } = require('../repositories/TicketInfoRepo');
 const { EventRepo } = require('../repositories/EventRepo');
@@ -46,11 +47,10 @@ async function mintTicketsWithRetry(trx, { userId, eventId, infoId, purchaseId, 
 
     // tickets + purchases both go through the same trx
     const ticket = await TicketMintRepo.save(
-      { code, ownerId: userId, eventId, infoId, purchaseId: null },
+      { code, ownerId: userId, eventId, infoId, purchaseId: purchase.purchse_id },
       trx
     );
-
-    await PaymentRepo.insertPurchase(
+    const purchase = await PaymentRepo.insertPurchase(
       purchaseId,
       ticket.ticketId,
       item.unit_price_cents,
@@ -76,7 +76,7 @@ class TicketingService {
 static async validateTicket({ currentUser, eventId, code }) {
   const eid = Number(eventId);
   const clean = String(code || '').trim();
-
+  console.log(clean)
   // basic shape checks
   if (!Number.isInteger(eid) || eid <= 0) {
     return { response: 'invalid', ticket: null };
@@ -92,11 +92,12 @@ static async validateTicket({ currentUser, eventId, code }) {
 
   // must be authenticated and be the organizer
   if (!currentUser || evt.organizer?.userId !== currentUser.userId) {
-    return { response: 'invalid', ticket: null };
-  }
+      throw new AppError('Forbidden', 403, {
+        code: 'FORBIDDEN',
+      });  }
 
   // look up ticket
-  const { TicketMintRepo } = require('../repositories/TicketMintRepo');
+  console.log(eid)
   const ticket = await TicketMintRepo.findByCodeForEvent(eid, clean);
   if (!ticket) return { response: 'invalid', ticket: null };
 
@@ -245,6 +246,7 @@ static async validateTicket({ currentUser, eventId, code }) {
       err.status = 401;
       throw err;
     }
+    console.log(query)
     const page = Math.max(parseInt(query?.page || '1', 10), 1);
     const pageSize = Math.min(Math.max(parseInt(query?.pageSize || '10', 10), 1), 100);
     const status = query?.status;

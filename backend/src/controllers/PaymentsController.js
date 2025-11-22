@@ -1,6 +1,6 @@
 /**
  * PaymentsController
- * Helper endpoints: verify a new card, issue a refund (admin/organizer flows).
+ * Helper endpoints: verify a new card, delete an existing card, .
  */
 const asyncHandler = require('../utils/handler');
 const { PaymentService } = require('../services/PaymentService');
@@ -17,6 +17,12 @@ class PaymentsController {
     const { paymentInfoId } = req.params;
     await PaymentService.deletePaymentMethod(req.user.userId, paymentInfoId);
     res.status(204).send();
+  });
+  static listMyPayments = asyncHandler(async (req, res) => {
+    const userId = req.user.userId || req.user.user_id || req.user.id;
+    const payments = await PaymentService.listPaymentsForUser(userId);
+
+    res.json({ payments });
   });
 }
 

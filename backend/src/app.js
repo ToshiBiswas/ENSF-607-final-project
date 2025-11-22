@@ -24,21 +24,24 @@
  *   - Node 18+ for native fetch (or polyfill if needed)
  *   - Heavily commented to show intent and extension points
  */
-
 require('dotenv').config();
+
+console.log("GEMINI_API_KEY is set:", !!process.env.GEMINI_API_KEY);
+
 const express = require('express');
 const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
 const cors = require('cors');
-
-// Central route registry
+const { EventRepo } = require('./repositories/EventRepo');
+const { EventService } = require('./services/EventService');
 const routes = require('./routes');
-
-// Error helpers
+const adviceRoutes = require('./routes/advice.routes.cjs');
+const payoutRoutes = require('./routes/payout.routes.cjs');
 const { errorMiddleware, notFound } = require('./utils/errors');
 
 const app = express();
 
-// CORS configuration
+// CORS configuration - Allow frontend to connect
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
@@ -46,6 +49,7 @@ app.use(cors({
 
 // JSON body parsing
 app.use(express.json());
+app.use(cookieParser());
 
 // Dev request logging; swap for pino in prod if you prefer
 app.use(morgan('dev'));
@@ -55,6 +59,8 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 
 // All API routes mounted under /api
 app.use('/api', routes);
+app.use('/api', adviceRoutes);
+app.use('/api', payoutRoutes);
 
 // 404 handler for unrecognized routes
 app.use(notFound);
@@ -72,8 +78,9 @@ if (require.main === module) {
     }
   });
 }
+
 function startExpiredEventCleanupScheduler() {
-  const INTERVAL_MS = 6 * 1000; // 1 minute
+  const INTERVAL_MS = process.env.INTERVAL_MS
   console.log('started Expired Events')
   setInterval(async () => {
     try {
@@ -91,7 +98,6 @@ function startExpiredEventCleanupScheduler() {
     }
   }, INTERVAL_MS);
 }
-
 
 module.exports = app;
 module.exports.startExpiredEventCleanupScheduler = startExpiredEventCleanupScheduler;
