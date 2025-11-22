@@ -1,4 +1,3 @@
-// backend/src/controllers/tickets.controller.js
 // backend/src/controllers/TicketsController.js
 const TicketService = require('../services/TicketingService');
 const asyncHandler = require('../utils/handler');
@@ -8,6 +7,7 @@ class TicketsController {
   // GET /api/tickets?page=...  (authenticated user’s tickets)
   static async getMyTickets(req, res) {
     const result = await TicketingService.getMyTickets(req.user, req.query);
+  }
   // POST /api/tickets
   static createTicket = asyncHandler(async (req, res) => {
     const result = await TicketService.createTicket(req.user, req.body);
@@ -35,8 +35,6 @@ class TicketsController {
     console.log(code)
     const result = await TicketingService.validateTicket({
       currentUser: req.user,   // <-- ensure we pass the caller
-    const result = await TicketService.validateTicket({
-      currentUser: req.user,
       eventId,
       code
     });
