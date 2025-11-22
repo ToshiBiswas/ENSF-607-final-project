@@ -61,6 +61,7 @@ function toInt(x) {
 
 exports.seed = async function (knex) {
   const accounts = loadApprovedAccounts();
+  await knex('payments').del().catch(()=>{});
 
   // Validate + normalize each record
   const rows = accounts.map((a, idx) => {
@@ -96,7 +97,7 @@ exports.seed = async function (knex) {
       currency,
     };
   });
-
+  
   await knex.transaction(async (trx) => {
     await trx('payment_accounts').del();
     await trx.batchInsert('payment_accounts', rows, 100);

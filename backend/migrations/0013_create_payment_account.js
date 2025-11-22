@@ -4,7 +4,7 @@
 /**
  * Creates `payment_accounts` and inserts one test record.
  * This is for our mock functions to simulate payment provider. 
- * our real system would send these requests via a webhook.
+ * our real system would not store the 6396
  */
 
 exports.up = async function up(knex) {

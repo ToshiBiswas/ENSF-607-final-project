@@ -13,6 +13,10 @@ class UserRepo {
     if (!row) return null;
     return new User({ userId: row.user_id, name: row.name, email: row.email, role: row.role });
   }
+  static async findAuthByEmail(email) {
+    // raw DB row with password_hash included
+    return knex('users').where({ email }).first();
+  }
 
   /** Find a user by unique email */
   static async findByEmail(email) {

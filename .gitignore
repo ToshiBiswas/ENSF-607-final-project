@@ -1,3 +1,24 @@
+# Environment files - never commit these
+.env
+.env.*
+*.env
+!*.env.example
+
+# Backup files
+*.backup
+*.bak
+
+# Documentation files (generated)
+DOCKER_SETUP.md
+FIX_POWERSHELL.md
+RUN_INSTRUCTIONS.md
+TROUBLESHOOTING.md
+QUICK_START.md
+
+# Node modules (dependencies)
+node_modules/
+
+
 # Frontend dependencies
 frontend/node_modules/
 
