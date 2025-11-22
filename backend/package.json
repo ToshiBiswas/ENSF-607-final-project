@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "node -r dotenv/config src/server.js",
     "start": "node -r dotenv/config src/server.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "rollback": "knex migrate:rollback",
     "migrate": "knex migrate:latest --env development",
     "seed": "knex seed:run --env development"
