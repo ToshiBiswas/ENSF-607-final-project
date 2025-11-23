@@ -275,6 +275,25 @@ const Homepage: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* Categories List at Bottom */}
+            <div className="max-w-7xl mx-auto px-4 pb-8">
+                <h2 className="text-lg font-semibold text-center mb-2 mt-8">Categories</h2>
+                <div className="flex flex-wrap gap-2 justify-center">
+                    {categories.length === 0 ? (
+                        <span className="text-slate-500">No categories found.</span>
+                    ) : (
+                        categories.map((category) => (
+                            <span
+                                key={category.categoryId}
+                                className="px-3 py-1 bg-[#44CE85] bg-opacity-20 text-[#056733] text-sm rounded-full"
+                            >
+                                {category.value}
+                            </span>
+                        ))
+                    )}
+                </div>
+            </div>
         </div>
     );
 };
