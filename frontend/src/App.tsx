@@ -10,6 +10,7 @@ import TransactionHistory from "./pages/TransactionHistory";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Notifications from "./pages/Notifications";
+import Events from "./pages/Events";
 import Navbar from "./components/Navbar";
 import Cart from "./components/Cart";
 import Checkout from "./components/Checkout";
@@ -34,6 +35,9 @@ function App() {
           
           {/* Notifications route */}
           <Route path="/notifications" element={<Notifications />} />
+          
+          {/* Events route */}
+          <Route path="/events" element={<Events />} />
           
           {/* MyAccount with nested routes */}
           <Route path="/MyAccount" element={<MyAccount />}>
