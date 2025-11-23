@@ -4,6 +4,11 @@
  */
 module.exports = function asyncHandler(fn) {
   return function wrapped(req, res, next) {
-    Promise.resolve(fn(req, res, next)).catch(next);
+    try {
+      // Support both sync and async handlers
+      return Promise.resolve(fn(req, res, next)).catch(next);
+    } catch (err) {
+      return next(err);
+    }
   };
 };

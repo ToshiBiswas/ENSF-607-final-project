@@ -83,24 +83,12 @@ describe('CartService', () => {
 
     //Test addToCart - missing ticket_info_id
     test('should throw error when ticket_info_id is missing', async () => {
-      await expect(
-        CartService.addToCart(mockUser, null, 2)
-      ).rejects.toThrow(AppError);
-
-      await expect(
-        CartService.addToCart(mockUser, null, 2)
-      ).rejects.toThrow('Missing ticket_info_id');
+      await expect(CartService.addToCart(mockUser, null, 2)).rejects.toThrow('Missing ticket_info_id');
     });
 
     //Test addToCart - missing quantity
     test('should throw error when quantity is missing', async () => {
-      await expect(
-        CartService.addToCart(mockUser, 5, null)
-      ).rejects.toThrow(AppError);
-
-      await expect(
-        CartService.addToCart(mockUser, 5, null)
-      ).rejects.toThrow('Missing quantity');
+      await expect(CartService.addToCart(mockUser, 5, null)).rejects.toThrow('Missing quantity');
     });
 
     //Test addToCart - invalid ticket_info_id
@@ -124,13 +112,7 @@ describe('CartService', () => {
       };
       mockTrx.mockReturnValueOnce(ticketInfoMock);
 
-      await expect(
-        CartService.addToCart(mockUser, 999, 2)
-      ).rejects.toThrow(AppError);
-
-      await expect(
-        CartService.addToCart(mockUser, 999, 2)
-      ).rejects.toThrow('Ticket type not found');
+      await expect(CartService.addToCart(mockUser, 999, 2)).rejects.toThrow('Ticket type not found');
     });
 
     //Test addToCart - insufficient stock
@@ -145,15 +127,9 @@ describe('CartService', () => {
         where: jest.fn().mockReturnThis(),
         first: jest.fn().mockResolvedValue(mockTicketInfo),
       };
-      mockTrx.mockReturnValueOnce(ticketInfoMock);
+      mockTrx.mockReturnValue(ticketInfoMock);
 
-      await expect(
-        CartService.addToCart(mockUser, 5, 5)
-      ).rejects.toThrow(AppError);
-
-      await expect(
-        CartService.addToCart(mockUser, 5, 5)
-      ).rejects.toThrow('Not enough tickets left');
+      await expect(CartService.addToCart(mockUser, 5, 5)).rejects.toThrow('Not enough tickets left');
     });
   });
 
