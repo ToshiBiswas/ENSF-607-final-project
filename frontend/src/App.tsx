@@ -16,6 +16,8 @@ import Cart from "./components/Cart";
 import Checkout from "./components/Checkout";
 import AIAdvice from "./components/AIAdvice";
 import PaymentInfo from "./components/PaymentInfo";
+import AdvicePage from "./pages/AdvicePage";
+import EventPageWithParams from "./pages/EventPage";
 
 function App() {
   return (
@@ -52,7 +54,9 @@ function App() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/ai-advice" element={<AIAdvice />} />
+          <Route path="/advice" element={<AdvicePage />} />
           <Route path="/payment-info" element={<PaymentInfo />} />
+          <Route path="/events/:id" element={<EventPageWithParams />} />
         </Routes>
       </Router>
     </AuthProvider>
