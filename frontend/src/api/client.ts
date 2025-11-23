@@ -3,7 +3,35 @@
  * Centralized HTTP client for backend API calls
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// For production, use relative URLs if same origin, otherwise use full URL with port
+// In development, Vite proxy handles /api requests
+const getApiBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) {
+    // If it's a relative URL, use as-is
+    if (envUrl.startsWith('/')) {
+      return envUrl;
+    }
+    // Ensure it ends with /api
+    return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
+  }
+  
+  // In production (not localhost), construct URL with same hostname and port 3000
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    // Use port 3000 for backend API
+    return `${protocol}//${hostname}:3000/api`;
+  }
+  
+  // Default for local development
+  return 'http://localhost:3000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+// Log the API URL for debugging
+console.log('API Base URL:', API_BASE_URL);
 
 export interface ApiError {
   error: string;
@@ -34,19 +62,32 @@ class ApiClient {
       headers.set('Authorization', `Bearer ${token}`);
     }
 
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
-      ...options,
-      headers,
-    });
+    const url = `${this.baseURL}${endpoint}`;
+    
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
 
-    if (!response.ok) {
-      const error: ApiError = await response.json().catch(() => ({
-        error: `HTTP ${response.status}: ${response.statusText}`,
-      }));
-      throw new Error(error.error || error.message || 'Request failed');
+      if (!response.ok) {
+        const error: ApiError = await response.json().catch(() => ({
+          error: `HTTP ${response.status}: ${response.statusText}`,
+        }));
+        throw new Error(error.error || error.message || 'Request failed');
+      }
+
+      return response.json() as Promise<T>;
+    } catch (err) {
+      // Handle network errors (CORS, connection refused, etc.)
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        console.error(`API Request failed to ${url}:`, err);
+        throw new Error(
+          `Network error: Unable to connect to the API server at ${this.baseURL}. Please check if the backend is running and CORS is configured correctly.`
+        );
+      }
+      throw err;
     }
-
-    return response.json() as Promise<T>;
   }
 
 

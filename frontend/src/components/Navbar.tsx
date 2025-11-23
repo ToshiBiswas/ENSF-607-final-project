@@ -24,9 +24,7 @@ const Navbar: React.FC = () => {
             }}
         >
             {/* logo - clickable to homepage */}
-            <Link to="/">
-                <Logo variant="white-logotype" height={40} />
-            </Link>
+            <Logo variant="white-logotype" height={40} clickable={true} />
 
             {/* Navigation Links */}
             <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
