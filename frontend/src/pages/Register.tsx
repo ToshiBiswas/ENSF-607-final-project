@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import Logo from "../components/Logo";
 import "./Register.css";
 
 const Register: React.FC = () => {
@@ -32,126 +33,128 @@ const Register: React.FC = () => {
     try {
       await register(name, email, password);
       navigate("/");
-    } catch (err: any) {
-      if (err instanceof Error) {
-        setError(err.message || "Registration failed. Please try again.");
-      } else {
-        setError("Registration failed. Please try again.");
-      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Registration failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="register-page">
-      <div className="register-shell">
-        {/* Left side – hero */}
-        <section className="register-hero">
-          <span className="register-pill">
-            <span className="register-pill-dot" />
-            Event Planner
-          </span>
+    <div className="auth-page">
+      <div className="auth-shell">
+        {/* Left / top side – brand section */}
+        <div className="auth-brand">
+          <Logo variant="green-logotype" height={50} clickable={false} />
+          <h1 className="auth-title">Create your account ✨</h1>
+          <p className="auth-subtitle">
+            Join MindPlanner to create events, manage attendees, and track
+            everything from one clean dashboard.
+          </p>
 
-          <div className="register-hero-header">
-            <h1 className="register-title">Create your account ✨</h1>
-            <p className="register-subtitle">
-              Join MindPlanner to create events, manage attendees, and track
-              everything from a single, elegant dashboard.
-            </p>
-          </div>
-
-          <div className="register-highlight">
-            <p className="register-highlight-title">What you get</p>
-            <ul className="register-highlight-list">
-              <li>Publish and share events in minutes</li>
-              <li>Monitor ticket sales in real time</li>
-              <li>Send updates and notifications with one click</li>
+          <div className="auth-highlight">
+            <p className="auth-highlight-title">Why sign up?</p>
+            <ul className="auth-highlight-list">
+              <li>✓ Publish and share events in minutes</li>
+              <li>✓ Keep an eye on ticket sales in real time</li>
+              <li>✓ Send updates and notifications with one click</li>
             </ul>
           </div>
-        </section>
+        </div>
 
-        {/* Right side – card */}
-        <section className="register-card">
-          <header className="register-card-header">
+        {/* Right / bottom side – register form card */}
+        <div className="auth-card">
+          <div className="auth-card-header">
             <h2>Create your account</h2>
             <p>Fill in your details to get started.</p>
-          </header>
+          </div>
 
-          {error && <div className="register-error">{error}</div>}
+          {error && (
+            <div className="auth-error">
+              <p>{error}</p>
+            </div>
+          )}
 
-          <form onSubmit={handleSubmit} className="register-form">
-            <div className="register-field">
-              <label htmlFor="name">Full name</label>
+          <form onSubmit={handleSubmit} className="auth-form">
+            <label className="auth-field">
+              <span>Full name</span>
               <input
                 id="name"
                 type="text"
-                placeholder="John Doe"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                placeholder="John Doe"
+                className="auth-input"
               />
-            </div>
+            </label>
 
-            <div className="register-field">
-              <label htmlFor="email">Email address</label>
+            <label className="auth-field">
+              <span>Email address</span>
               <input
                 id="email"
                 type="email"
                 autoComplete="email"
-                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                placeholder="you@example.com"
+                className="auth-input"
               />
-            </div>
+            </label>
 
-            <div className="register-field">
-              <label htmlFor="password">Password</label>
+            <label className="auth-field">
+              <span>Password</span>
               <input
                 id="password"
                 type="password"
                 autoComplete="new-password"
-                placeholder="At least 6 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
+                placeholder="At least 6 characters"
+                className="auth-input"
               />
-            </div>
+            </label>
 
-            <div className="register-field">
-              <label htmlFor="confirmPassword">Confirm password</label>
+            <label className="auth-field">
+              <span>Confirm password</span>
               <input
                 id="confirmPassword"
                 type="password"
                 autoComplete="new-password"
-                placeholder="Re-enter your password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 minLength={6}
+                placeholder="Re-enter your password"
+                className="auth-input"
               />
-            </div>
+            </label>
 
             <button
               type="submit"
               disabled={loading}
-              className="register-button"
+              className="auth-button"
             >
-              {loading ? "Creating account..." : "Sign up"}
+              {loading ? "Creating account..." : "Sign Up"}
             </button>
           </form>
 
-          <p className="register-footer">
+          <p className="auth-footer">
             Already have an account?{" "}
-            <Link to="/login" className="register-link">
+            <Link to="/login" className="auth-link">
               Sign in
             </Link>
           </p>
-        </section>
+        </div>
       </div>
-    </main>
+    </div>
   );
 };
 
