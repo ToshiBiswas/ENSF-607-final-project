@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import SearchInput from "../components/SearchInput";
 import { eventsApi, Event } from "../api/events";
 import { getCategories, Category } from "../api/categories";
 
-const Homepage: React.FC = () => {
+const Events: React.FC = () => {
     const [events, setEvents] = useState<Event[]>([]);
     const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string>("");
+    const navigate = useNavigate();
 
     // Categories loaded from backend
     const [categories, setCategories] = useState<Category[]>([]);
@@ -89,7 +91,7 @@ const Homepage: React.FC = () => {
                         Discover Amazing Events
                     </h1>
                     <p className="text-xl text-slate-300 mb-8">
-                        Plan smarter, stay organized, and achieve your goals.
+                        Browse all available events and find something exciting to attend.
                     </p>
                     
                     {/* Search Input */}
@@ -262,8 +264,7 @@ const Homepage: React.FC = () => {
                                         <button
                                             className="w-full py-2 bg-[#009245] text-white rounded-lg hover:bg-[#056733] transition-colors"
                                             onClick={() => {
-                                                // Navigate to event details (you can implement this)
-                                                console.log("View event:", event.eventId);
+                                                navigate(`/events/${event.eventId}`);
                                             }}
                                         >
                                             View Details
@@ -279,4 +280,5 @@ const Homepage: React.FC = () => {
     );
 };
 
-export default Homepage;
+export default Events;
+
