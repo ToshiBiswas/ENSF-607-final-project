@@ -7,6 +7,10 @@ import MyTickets from "./pages/MyTickets";
 import MyInfo from "./pages/MyInfo";
 import MyPaymentInfo from "./pages/MyPaymentInfo";
 import TransactionHistory from "./pages/TransactionHistory";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Notifications from "./pages/Notifications";
+import Events from "./pages/Events";
 import Navbar from "./components/Navbar";
 import Cart from "./components/Cart";
 import Checkout from "./components/Checkout";
@@ -24,6 +28,16 @@ function App() {
         <Routes>
           {/* When user visits /, show homepage */}
           <Route path="/" element={<Homepage />} />
+          
+          {/* Authentication routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
+          {/* Notifications route */}
+          <Route path="/notifications" element={<Notifications />} />
+          
+          {/* Events route */}
+          <Route path="/events" element={<Events />} />
           
           {/* MyAccount with nested routes */}
           <Route path="/MyAccount" element={<MyAccount />}>

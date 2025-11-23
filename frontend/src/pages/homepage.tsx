@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from "react";
-import SearchInput from "../components/SearchInput";
 import { eventsApi, Event } from "../api/events";
-import "./Homepage.css";
 
 const Homepage: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
-  const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
 
   const categories = [
@@ -25,39 +21,18 @@ const Homepage: React.FC = () => {
     loadEvents();
   }, [selectedCategory]);
 
-  useEffect(() => {
-    filterEvents();
-  }, [searchQuery, events]);
-
   const loadEvents = async () => {
     try {
       setLoading(true);
       setError(null);
       const data = await eventsApi.getByCategory(selectedCategory || undefined);
       setEvents(data);
-      setFilteredEvents(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load events");
       console.error("Error loading events:", err);
     } finally {
       setLoading(false);
     }
-  };
-
-  const filterEvents = () => {
-    if (!searchQuery.trim()) {
-      setFilteredEvents(events);
-      return;
-    }
-
-    const query = searchQuery.toLowerCase();
-    const filtered = events.filter(
-      (event) =>
-        event.title.toLowerCase().includes(query) ||
-        event.description.toLowerCase().includes(query) ||
-        event.location.toLowerCase().includes(query)
-    );
-    setFilteredEvents(filtered);
   };
 
   const formatDate = (dateString: string) => {
@@ -79,33 +54,29 @@ const Homepage: React.FC = () => {
   };
 
   return (
-    <div className="home-page">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Hero Section */}
-      <section className="home-hero">
-        <div className="home-hero-inner">
-          <h1 className="home-hero-title">Discover Amazing Events</h1>
-          <p className="home-hero-subtitle">
+      <div className="bg-gradient-to-r from-[#056733] to-[#009245] text-white py-16 px-4">
+        <div className="max-w-7xl mx-auto text-center">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            Discover Amazing Events
+          </h1>
+          <p className="text-xl text-slate-200">
             Plan smarter, stay organized, and achieve your goals.
           </p>
-
-          <div className="home-hero-search">
-            <SearchInput
-              placeholder="Search events by name, description, or location..."
-              onSearch={setSearchQuery}
-            />
-          </div>
         </div>
-      </section>
+      </div>
 
       {/* Category Filters */}
-      <section className="home-filters">
-        <div className="home-filters-inner">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="flex flex-wrap gap-2 justify-center">
           <button
             onClick={() => setSelectedCategory("")}
-            className={
-              "home-filter-button" +
-              (selectedCategory === "" ? " home-filter-button--active" : "")
-            }
+            className={`px-4 py-2 rounded-full transition-colors shadow-sm ${
+              selectedCategory === ""
+                ? "bg-[#009245] text-white shadow-md"
+                : "bg-white text-slate-700 hover:bg-[#44CE85] hover:text-white"
+            }`}
           >
             All Events
           </button>
@@ -113,47 +84,42 @@ const Homepage: React.FC = () => {
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={
-                "home-filter-button" +
-                (selectedCategory === category
-                  ? " home-filter-button--active"
-                  : "")
-              }
+              className={`px-4 py-2 rounded-full transition-colors shadow-sm ${
+                selectedCategory === category
+                  ? "bg-[#009245] text-white shadow-md"
+                  : "bg-white text-slate-700 hover:bg-[#44CE85] hover:text-white"
+              }`}
             >
               {category}
             </button>
           ))}
         </div>
-      </section>
+      </div>
 
-      {/* Events Grid / States */}
-      <section className="home-content">
+      {/* Events Grid */}
+      <div className="max-w-7xl mx-auto px-4 pb-16">
         {loading ? (
-          <div className="home-status">
-            <div className="home-spinner" />
-            <p className="home-status-text">Loading events...</p>
+          <div className="text-center py-16">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#009245]" />
+            <p className="mt-4 text-slate-600">Loading events...</p>
           </div>
         ) : error ? (
-          <div className="home-status">
-            <p className="home-status-text home-status-text--error">{error}</p>
+          <div className="text-center py-16">
+            <p className="text-red-600 mb-4">{error}</p>
             <button
               onClick={loadEvents}
-              className="home-retry-button"
+              className="px-6 py-2 bg-[#009245] text-white rounded-lg hover:bg-[#056733] transition-colors"
             >
               Try Again
             </button>
           </div>
-        ) : filteredEvents.length === 0 ? (
-          <div className="home-status">
-            <p className="home-status-text">
-              {searchQuery
-                ? "No events found matching your search."
-                : "No events available."}
-            </p>
+        ) : events.length === 0 ? (
+          <div className="text-center py-16">
+            <p className="text-slate-600 text-lg">No events available.</p>
           </div>
         ) : (
-          <div className="home-grid">
-            {filteredEvents.map((event) => {
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {events.map((event) => {
               const minPrice = event.tickets
                 ? Math.min(...event.tickets.map((t) => t.ticketPrice))
                 : 0;
@@ -162,28 +128,30 @@ const Homepage: React.FC = () => {
                 : 0;
 
               return (
-                <article
+                <div
                   key={event.eventId}
-                  className="home-card"
+                  className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition-shadow"
                 >
-                  <div className="home-card-inner">
-                    <header className="home-card-header">
-                      <h3 className="home-card-title">{event.title}</h3>
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="text-xl font-bold text-slate-800 flex-1">
+                        {event.title}
+                      </h3>
                       {minPrice > 0 && (
-                        <span className="home-card-price">
+                        <span className="text-lg font-semibold text-slate-800 ml-2">
                           {formatPrice(minPrice)}+
                         </span>
                       )}
-                    </header>
+                    </div>
 
-                    <p className="home-card-description">
+                    <p className="text-slate-600 text-sm mb-4 line-clamp-2">
                       {event.description}
                     </p>
 
-                    <div className="home-card-meta">
-                      <div className="home-card-meta-item">
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-sm text-slate-600">
                         <svg
-                          className="home-card-icon"
+                          className="w-4 h-4 mr-2"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -204,9 +172,9 @@ const Homepage: React.FC = () => {
                         {event.location}
                       </div>
 
-                      <div className="home-card-meta-item">
+                      <div className="flex items-center text-sm text-slate-600">
                         <svg
-                          className="home-card-icon"
+                          className="w-4 h-4 mr-2"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -222,9 +190,9 @@ const Homepage: React.FC = () => {
                       </div>
 
                       {availableTickets > 0 && (
-                        <div className="home-card-meta-item home-card-meta-item--accent">
+                        <div className="flex items-center text-sm text-[#009245]">
                           <svg
-                            className="home-card-icon"
+                            className="w-4 h-4 mr-2"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -242,11 +210,11 @@ const Homepage: React.FC = () => {
                     </div>
 
                     {event.categories && event.categories.length > 0 && (
-                      <div className="home-card-tags">
+                      <div className="flex flex-wrap gap-2 mb-4">
                         {event.categories.map((cat) => (
                           <span
                             key={cat.categoryId}
-                            className="home-card-tag"
+                            className="px-2 py-1 bg-[#44CE85] bg-opacity-20 text-[#056733] text-xs rounded-full"
                           >
                             {cat.value}
                           </span>
@@ -255,21 +223,21 @@ const Homepage: React.FC = () => {
                     )}
 
                     <button
-                      className="home-card-button"
+                      className="w-full py-2 bg-[#009245] text-white rounded-lg hover:bg-[#056733] transition-colors"
                       onClick={() => {
-                        // TODO: hook up navigation when ready
+                        // hook up navigation when you add an event details page
                         console.log("View event:", event.eventId);
                       }}
                     >
                       View Details
                     </button>
                   </div>
-                </article>
+                </div>
               );
             })}
           </div>
         )}
-      </section>
+      </div>
     </div>
   );
 };

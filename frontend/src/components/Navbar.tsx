@@ -1,8 +1,17 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Logo from "./Logo";
+import { useAuth } from "../context/AuthContext";
 
 const Navbar: React.FC = () => {
+    const { isAuthenticated, logout, user } = useAuth();
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        logout();
+        navigate("/");
+    };
+
     return (
         <nav
             style={{
@@ -15,18 +24,36 @@ const Navbar: React.FC = () => {
             }}
         >
             {/* logo - clickable to homepage */}
-            <Logo variant="white-logotype" height={40} />
+            <Logo variant="white-logotype" height={40} clickable={true} />
 
             {/* Navigation Links */}
-            <div style={{ display: "flex", gap: "1.5rem" }}>
-                <Link to="/" style={linkStyle}>
-                    Sign in
-                </Link>
-                <Link to="/MyAccount" style={linkStyle}>
-                    My Account
-                </Link>
+            <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
+                {isAuthenticated ? (
+                    <>
+                        {user && (
+                            <span style={{ fontSize: "0.9rem", opacity: 0.9 }}>
+                                {user.name}
+                            </span>
+                        )}
+                        <Link to="/MyAccount" style={linkStyle}>
+                            My Account
+                        </Link>
+                        <button onClick={handleLogout} style={buttonStyle}>
+                            Logout
+                        </button>
+                    </>
+                ) : (
+                    <>
+                        <Link to="/login" style={linkStyle}>
+                            Sign in
+                        </Link>
+                        <Link to="/register" style={linkStyle}>
+                            Sign up
+                        </Link>
+                    </>
+                )}
                 
-                <Link to="/Events" style={linkStyle}>
+                <Link to="/events" style={linkStyle}>
                     Events
                 </Link>
                 <Link to="#" style={linkStyle}>
@@ -42,6 +69,16 @@ const linkStyle: React.CSSProperties = {
     color: "white",
     textDecoration: "none",
     fontSize: "1rem",
+};
+
+const buttonStyle: React.CSSProperties = {
+    color: "white",
+    textDecoration: "none",
+    fontSize: "1rem",
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    padding: 0,
 };
 
 export default Navbar;

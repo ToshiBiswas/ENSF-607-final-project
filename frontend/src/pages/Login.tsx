@@ -1,27 +1,42 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import "./Login.css"; // <-- add this
+import "./Login.css"; // reuse the same auth styles as Login
 
-const Login: React.FC = () => {
+const Register: React.FC = () => {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await login(email, password);
+      await register(name, email, password);
       navigate("/");
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Login failed. Please try again."
+        err instanceof Error
+          ? err.message
+          : "Registration failed. Please try again."
       );
     } finally {
       setLoading(false);
@@ -31,30 +46,30 @@ const Login: React.FC = () => {
   return (
     <div className="auth-page">
       <div className="auth-shell">
-        {/* Left / top side – brand + vibes */}
+        {/* Left / top side – brand section (mirrors Login) */}
         <div className="auth-brand">
           <div className="auth-pill">Event Planner</div>
-          <h1 className="auth-title">Welcome back, Toshi 👋</h1>
+          <h1 className="auth-title">Create your account ✨</h1>
           <p className="auth-subtitle">
-            Sign in to manage your events, track attendees, and keep everything
-            running smoothly in one place.
+            Join MindPlanner to create events, manage attendees, and track
+            everything from one clean dashboard.
           </p>
 
           <div className="auth-highlight">
-            <p className="auth-highlight-title">Why log in?</p>
+            <p className="auth-highlight-title">Why sign up?</p>
             <ul className="auth-highlight-list">
-              <li>✓ Create and publish events in minutes</li>
-              <li>✓ Monitor ticket sales in real time</li>
-              <li>✓ Send updates and notifications effortlessly</li>
+              <li>✓ Publish and share events in minutes</li>
+              <li>✓ Keep an eye on ticket sales in real time</li>
+              <li>✓ Send updates and notifications with one click</li>
             </ul>
           </div>
         </div>
 
-        {/* Right / bottom side – actual form */}
+        {/* Right / bottom side – register form card */}
         <div className="auth-card">
           <div className="auth-card-header">
-            <h2>Sign in to your account</h2>
-            <p>Use your email and password to continue.</p>
+            <h2>Create your account</h2>
+            <p>Fill in your details to get started.</p>
           </div>
 
           {error && (
@@ -64,6 +79,19 @@ const Login: React.FC = () => {
           )}
 
           <form onSubmit={handleSubmit} className="auth-form">
+            <label className="auth-field">
+              <span>Full name</span>
+              <input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                placeholder="John Doe"
+                className="auth-input"
+              />
+            </label>
+
             <label className="auth-field">
               <span>Email address</span>
               <input
@@ -83,11 +111,27 @@ const Login: React.FC = () => {
               <input
                 id="password"
                 type="password"
-                autoComplete="current-password"
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder="Enter your password"
+                minLength={6}
+                placeholder="At least 6 characters"
+                className="auth-input"
+              />
+            </label>
+
+            <label className="auth-field">
+              <span>Confirm password</span>
+              <input
+                id="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={6}
+                placeholder="Re-enter your password"
                 className="auth-input"
               />
             </label>
@@ -97,14 +141,14 @@ const Login: React.FC = () => {
               disabled={loading}
               className="auth-button"
             >
-              {loading ? "Signing you in..." : "Sign In"}
+              {loading ? "Creating account..." : "Sign Up"}
             </button>
           </form>
 
           <p className="auth-footer">
-            Don&apos;t have an account?{" "}
-            <Link to="/register" className="auth-link">
-              Sign up
+            Already have an account?{" "}
+            <Link to="/login" className="auth-link">
+              Sign in
             </Link>
           </p>
         </div>
@@ -113,4 +157,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login;
+export default Register;
