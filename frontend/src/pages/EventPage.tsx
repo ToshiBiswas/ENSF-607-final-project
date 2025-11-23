@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import './EventPage.css';
 
 type Ticket = {
@@ -20,7 +21,7 @@ type Event = {
   categories: { categoryId: number; value: string }[];
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? '/api';
 
 export function EventPage({ eventId }: { eventId: number }) {
   const [event, setEvent] = useState<Event | null>(null);
@@ -98,4 +99,13 @@ export function EventPage({ eventId }: { eventId: number }) {
       </section>
     </section>
   );
+}
+
+export default function EventPageWithParams() {
+  const params = useParams();
+  const id = Number(params.id);
+  if (!Number.isFinite(id) || id <= 0) {
+    return <div className="event-page error">Invalid event id</div>;
+  }
+  return <EventPage eventId={id} />;
 }

@@ -139,6 +139,34 @@ static async toDomain(row) {
     return Promise.all(rows.map((r) => this.toDomain(r)));
   }
 
+  /** Lightweight finder for recommendation: match category value or title substring */
+  static async findByCategoryOrTitle(value) {
+    const v = String(value || '').trim();
+    if (!v) return [];
+
+    // Try category match
+    const categoryMatches = await knex('events as e')
+      .leftJoin('eventscategories as ec', 'e.event_id', 'ec.event_id')
+      .leftJoin('categoriesid as c', 'c.category_id', 'ec.category_id')
+      .whereILike('c.category_value', `%${v}%`)
+      .select('e.*');
+
+    // Title fallback
+    const titleMatches = await knex('events')
+      .whereILike('title', `%${v}%`)
+      .select('*');
+
+    const combined = [...categoryMatches, ...titleMatches];
+
+    // Deduplicate by event_id
+    const byId = new Map();
+    for (const row of combined) {
+      if (!byId.has(row.event_id)) byId.set(row.event_id, row);
+    }
+
+    return Promise.all(Array.from(byId.values()).map((r) => this.toDomain(r)));
+  }
+
   /** Insert a new event shell; tickets/categories are attached separately */
   static async insert({
     organizerId,
@@ -360,6 +388,34 @@ static async toDomain(row) {
 
     return knex('events').where({ event_id: eventId }).update(patch);
   }
+  static async findUpcomingByCategory({ categoryLike, limit = 5 }) {
+  const like = `%${String(categoryLike || '').toLowerCase()}%`;
+
+  const rows = await knex('events as e')
+    .join('eventscategories as ec', 'e.event_id', 'ec.event_id')
+    .join('categoriesid as c', 'c.category_id', 'ec.category_id')
+    // MySQL is often CI by collation, but force CI with LOWER to be safe:
+    .whereRaw('LOWER(c.category_value) LIKE ?', [like])
+    .andWhere('e.start_time', '>=', knex.raw('CURRENT_DATE'))
+    .select(
+      'e.event_id as id',
+      'e.title as name',
+      'c.category_value as category',
+      'e.start_time as date',
+      'e.location as location'
+    )
+    .orderBy('e.start_time', 'asc')
+    .limit(limit);
+
+  // Normalize date to YYYY-MM-DD for the LLM prompt
+  return rows.map(r => ({
+    id: r.id,
+    name: r.name,
+    category: r.category,
+    date: r.date ? new Date(r.date).toISOString().slice(0, 10) : null,
+    location: r.location || ''
+  }));
+}
 }
 
 module.exports = { EventRepo };

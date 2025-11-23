@@ -37,14 +37,23 @@ const Navbar: React.FC = () => {
                                 {user.name}
                             </span>
                         )}
-                        <Link to="/MyAccount" style={linkStyle}>
-                            My Account
-                        </Link>
-                        <button onClick={handleLogout} style={buttonStyle}>
-                            Logout
-                        </button>
-                    </>
-                ) : (
+                <Link to="/MyAccount" style={linkStyle}>
+                    My Account
+                </Link>
+                <Link to="/cart" style={linkStyle}>
+                    Cart
+                </Link>
+                <Link to="/checkout" style={linkStyle}>
+                    Checkout
+                </Link>
+                <Link to="/payment-info" style={linkStyle}>
+                    Payment Info
+                </Link>
+                <button onClick={handleLogout} style={buttonStyle}>
+                    Logout
+                </button>
+            </>
+        ) : (
                     <>
                         <Link to="/login" style={linkStyle}>
                             Sign in
@@ -57,6 +66,9 @@ const Navbar: React.FC = () => {
                 
                 <Link to="/Events" style={linkStyle}>
                     Events
+                </Link>
+                <Link to="/advice" style={linkStyle}>
+                    Advice
                 </Link>
                 <Link to="#" style={linkStyle}>
                     About
