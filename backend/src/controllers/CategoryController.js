@@ -10,9 +10,11 @@ class CategoryController {
    * List every available category.
    */
   static categories = asyncHandler(async (req, res) => {
-    const evt = await CategoryService.getAll();
-    if (!evt) return res.status(404).json({ error: 'Not found' });
-    res.json({ ...evt});
+    const categories = await CategoryService.getAll();
+    if (!categories || categories.length === 0) {
+      return res.json({ categories: [] });
+    }
+    res.json({ categories });
   });
 
 
