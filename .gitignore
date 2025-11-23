@@ -32,3 +32,4 @@ backend/build/
 # IDE stuff
 .vscode/
 .idea/
+frontend/node_modules/@rollup/rollup-win32-x64-msvc/rollup.win32-x64-msvc.node
