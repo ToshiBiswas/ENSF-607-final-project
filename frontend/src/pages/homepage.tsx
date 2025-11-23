@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import SearchInput from "../components/SearchInput";
 import { eventsApi, Event } from "../api/events";
+import { getCategories, Category } from "../api/categories";
 
 const Homepage: React.FC = () => {
     const [events, setEvents] = useState<Event[]>([]);
@@ -10,8 +11,17 @@ const Homepage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string>("");
 
-    // Common categories (you can fetch these from API if available)
-    const categories = ["Tech", "Music", "Sports", "Arts", "Food", "Business", "Education"];
+    // Categories loaded from backend
+    const [categories, setCategories] = useState<Category[]>([]);
+    useEffect(() => {
+        // Load categories from backend
+        getCategories()
+            .then(setCategories)
+            .catch((err) => {
+                console.error("Failed to load categories", err);
+                setCategories([]);
+            });
+    }, []);
 
     useEffect(() => {
         loadEvents();
@@ -107,15 +117,15 @@ const Homepage: React.FC = () => {
                     </button>
                     {categories.map((category) => (
                         <button
-                            key={category}
-                            onClick={() => setSelectedCategory(category)}
+                            key={category.categoryId}
+                            onClick={() => setSelectedCategory(category.value)}
                             className={`px-4 py-2 rounded-full transition-colors ${
-                                selectedCategory === category
+                                selectedCategory === category.value
                                     ? "bg-[#009245] text-white"
                                     : "bg-white text-slate-700 hover:bg-[#44CE85] hover:text-white"
                             }`}
                         >
-                            {category}
+                            {category.value}
                         </button>
                     ))}
                 </div>
