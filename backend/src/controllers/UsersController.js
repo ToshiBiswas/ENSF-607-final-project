@@ -6,6 +6,7 @@ const asyncHandler = require('../utils/handler');
 const { UserService } = require('../services/UserService');
 const { UserRepo } = require('../repositories/UserRepo');
 const { UserCardRepo } = require('../repositories/UserCardRepo');
+const { UserPreferencesRepo } = require('../repositories/UserPreferencesRepo');
 
 class UsersController {
   /** GET /api/me */
@@ -38,6 +39,23 @@ class UsersController {
       return { ...ticket, event };
     }));
     res.json({ tickets: enriched });
+  });
+
+  /** PUT /api/me/preferences  (upsert user's preferences) */
+  static setPreferences = asyncHandler(async (req, res) => {
+    // Accepts { location?: string, categoryId?: number }
+    const { location, categoryId } = req.body || {};
+
+    // Basic validation: allow null/undefined to clear a field, but ensure types when present
+    if (location !== undefined && location !== null && typeof location !== 'string') {
+      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'location must be a string' } });
+    }
+    if (categoryId !== undefined && categoryId !== null && typeof categoryId !== 'number') {
+      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'categoryId must be a number' } });
+    }
+
+    const prefs = await UserPreferencesRepo.upsert(req.user.userId, { location, categoryId });
+    res.json({ preferences: prefs });
   });
 
   /** GET /api/me/payments  (list user's payment history) */
