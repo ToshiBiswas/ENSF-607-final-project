@@ -1,98 +1,160 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import "./Login.css"; // reuse the same auth styles as Login
 
-const Login: React.FC = () => {
+const Register: React.FC = () => {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await login(email, password);
+      await register(name, email, password);
       navigate("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed. Please try again.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Registration failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4 py-12">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-lg shadow-xl p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-slate-800 mb-2">Welcome Back</h1>
-            <p className="text-slate-600">Sign in to your account</p>
+    <div className="auth-page">
+      <div className="auth-shell">
+        {/* Left / top side – brand section (mirrors Login) */}
+        <div className="auth-brand">
+          <div className="auth-pill">Event Planner</div>
+          <h1 className="auth-title">Create your account ✨</h1>
+          <p className="auth-subtitle">
+            Join MindPlanner to create events, manage attendees, and track
+            everything from one clean dashboard.
+          </p>
+
+          <div className="auth-highlight">
+            <p className="auth-highlight-title">Why sign up?</p>
+            <ul className="auth-highlight-list">
+              <li>✓ Publish and share events in minutes</li>
+              <li>✓ Keep an eye on ticket sales in real time</li>
+              <li>✓ Send updates and notifications with one click</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Right / bottom side – register form card */}
+        <div className="auth-card">
+          <div className="auth-card-header">
+            <h2>Create your account</h2>
+            <p>Fill in your details to get started.</p>
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-600 text-sm">{error}</p>
+            <div className="auth-error">
+              <p>{error}</p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
-                Email Address
-              </label>
+          <form onSubmit={handleSubmit} className="auth-form">
+            <label className="auth-field">
+              <span>Full name</span>
+              <input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                placeholder="John Doe"
+                className="auth-input"
+              />
+            </label>
+
+            <label className="auth-field">
+              <span>Email address</span>
               <input
                 id="email"
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                 placeholder="you@example.com"
+                className="auth-input"
               />
-            </div>
+            </label>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
-                Password
-              </label>
+            <label className="auth-field">
+              <span>Password</span>
               <input
                 id="password"
                 type="password"
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                placeholder="Enter your password"
+                minLength={6}
+                placeholder="At least 6 characters"
+                className="auth-input"
               />
-            </div>
+            </label>
+
+            <label className="auth-field">
+              <span>Confirm password</span>
+              <input
+                id="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={6}
+                placeholder="Re-enter your password"
+                className="auth-input"
+              />
+            </label>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="auth-button"
             >
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? "Creating account..." : "Sign Up"}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-slate-600 text-sm">
-              Don't have an account?{" "}
-              <Link to="/register" className="text-primary hover:text-primary-dark font-semibold">
-                Sign up
-              </Link>
-            </p>
-          </div>
+          <p className="auth-footer">
+            Already have an account?{" "}
+            <Link to="/login" className="auth-link">
+              Sign in
+            </Link>
+          </p>
         </div>
       </div>
     </div>
   );
 };
 
-export default Login;
-
+export default Register;

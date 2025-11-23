@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import "./Register.css";
 
 const Register: React.FC = () => {
   const [name, setName] = useState("");
@@ -31,113 +32,127 @@ const Register: React.FC = () => {
     try {
       await register(name, email, password);
       navigate("/");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
+    } catch (err: any) {
+      if (err instanceof Error) {
+        setError(err.message || "Registration failed. Please try again.");
+      } else {
+        setError("Registration failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4 py-12">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-lg shadow-xl p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-slate-800 mb-2">Create Account</h1>
-            <p className="text-slate-600">Sign up to get started</p>
+    <main className="register-page">
+      <div className="register-shell">
+        {/* Left side – hero */}
+        <section className="register-hero">
+          <span className="register-pill">
+            <span className="register-pill-dot" />
+            Event Planner
+          </span>
+
+          <div className="register-hero-header">
+            <h1 className="register-title">Create your account ✨</h1>
+            <p className="register-subtitle">
+              Join MindPlanner to create events, manage attendees, and track
+              everything from a single, elegant dashboard.
+            </p>
           </div>
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-600 text-sm">{error}</p>
-            </div>
-          )}
+          <div className="register-highlight">
+            <p className="register-highlight-title">What you get</p>
+            <ul className="register-highlight-list">
+              <li>Publish and share events in minutes</li>
+              <li>Monitor ticket sales in real time</li>
+              <li>Send updates and notifications with one click</li>
+            </ul>
+          </div>
+        </section>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-2">
-                Full Name
-              </label>
+        {/* Right side – card */}
+        <section className="register-card">
+          <header className="register-card-header">
+            <h2>Create your account</h2>
+            <p>Fill in your details to get started.</p>
+          </header>
+
+          {error && <div className="register-error">{error}</div>}
+
+          <form onSubmit={handleSubmit} className="register-form">
+            <div className="register-field">
+              <label htmlFor="name">Full name</label>
               <input
                 id="name"
                 type="text"
+                placeholder="John Doe"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                placeholder="John Doe"
               />
             </div>
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
-                Email Address
-              </label>
+            <div className="register-field">
+              <label htmlFor="email">Email address</label>
               <input
                 id="email"
                 type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                placeholder="you@example.com"
               />
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
-                Password
-              </label>
+            <div className="register-field">
+              <label htmlFor="password">Password</label>
               <input
                 id="password"
                 type="password"
+                autoComplete="new-password"
+                placeholder="At least 6 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                placeholder="At least 6 characters"
               />
             </div>
 
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700 mb-2">
-                Confirm Password
-              </label>
+            <div className="register-field">
+              <label htmlFor="confirmPassword">Confirm password</label>
               <input
                 id="confirmPassword"
                 type="password"
+                autoComplete="new-password"
+                placeholder="Re-enter your password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                placeholder="Confirm your password"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="register-button"
             >
-              {loading ? "Creating Account..." : "Sign Up"}
+              {loading ? "Creating account..." : "Sign up"}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-slate-600 text-sm">
-              Already have an account?{" "}
-              <Link to="/login" className="text-primary hover:text-primary-dark font-semibold">
-                Sign in
-              </Link>
-            </p>
-          </div>
-        </div>
+          <p className="register-footer">
+            Already have an account?{" "}
+            <Link to="/login" className="register-link">
+              Sign in
+            </Link>
+          </p>
+        </section>
       </div>
-    </div>
+    </main>
   );
 };
 
 export default Register;
-
