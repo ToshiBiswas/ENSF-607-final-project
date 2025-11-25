@@ -1,16 +1,10 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import Homepage from "./pages/homepage";
-import MyAccount from "./pages/MyAccount";
-import MyAccountDashboard from "./pages/MyAccountDashboard";
-import MyTickets from "./pages/MyTickets";
-import MyInfo from "./pages/MyInfo";
-import MyPaymentInfo from "./pages/MyPaymentInfo";
-import TransactionHistory from "./pages/TransactionHistory";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import Notifications from "./pages/Notifications";
 import Events from "./pages/Events";
+import About from "./pages/About";
 import Navbar from "./components/Navbar";
 import Cart from "./components/Cart";
 import Checkout from "./components/Checkout";
@@ -28,19 +22,18 @@ function App() {
 
         {/* Routes define what component appears for each URL path */}
         <Routes>
-          {/* When user visits /, show homepage */}
+          {/* Homepage */}
           <Route path="/" element={<Homepage />} />
           
           {/* Authentication routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           
-          {/* Notifications route */}
-          <Route path="/notifications" element={<Notifications />} />
-          
           {/* Events route */}
           <Route path="/events" element={<Events />} />
           
+          {/* About route */}
+          <Route path="/about" element={<About />} />
           {/* MyAccount with nested routes */}
           <Route path="/MyAccount" element={<MyAccount />}>
             <Route index element={<MyAccountDashboard />} />
