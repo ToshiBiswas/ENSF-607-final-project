@@ -181,9 +181,11 @@ class PaymentService {
     /**
    * returns all the payments made by a userId
    *
-   * @param
+   * @param {Number} userId user for payments
+   * @returns {Promise<{ paymentId: Number, userId: Number, paymentInfoId: Number, amountCents: Number, currency: string, createdAt: string;}[]>}
    * 
    */
+  
   static async listPaymentsForUser(userId) {
     return PaymentRepo.findByUserId(userId);
   }
