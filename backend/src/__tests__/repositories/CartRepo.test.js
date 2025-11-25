@@ -24,6 +24,7 @@ describe('CartRepo', () => {
     };
     mockKnex = mockTrx;
     knex.mockReturnValue(mockKnex);
+    knex.raw = jest.fn((str) => str);
   });
 
   afterEach(() => {

@@ -11,11 +11,11 @@ const { DBCart } = require("../domain/Cart")
 
 class CartService {
     static async addToCart(user, ticketInfoId, quantity) {
-    if (!ticketInfoId){
+    if (ticketInfoId === undefined || ticketInfoId === null){
       throw new AppError('Missing ticket_info_id', 400, { code: 'BAD_INFO_ID' });
 
     }
-    if(!quantity){
+    if(quantity === undefined || quantity === null){
       throw new AppError('Missing quantity', 400, { code: 'BAD_QUANTITY' });
 
     }
@@ -53,10 +53,10 @@ class CartService {
 
   /** Set quantity for a cart item. qty=0 removes the item. */
   static async setItemQuantity(user, ticketInfoId, quantity) {
-    if (!ticketInfoId){
+    if (ticketInfoId === undefined || ticketInfoId === null){
       throw new AppError('Missing ticket_info_id', 400, { code: 'MISSING_INFO_ID' });
     }
-    if(!quantity){
+    if(quantity === undefined || quantity === null){
       throw new AppError('Missing quantity', 400, { code: 'MISSING_INFO_ID' });
     }
     const infoId = Number(ticketInfoId);
