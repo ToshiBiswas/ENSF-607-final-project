@@ -218,3 +218,24 @@ export const aiApi = {
     }),
 };
 
+// User tickets (for outfit advice)
+export interface UserTicket {
+  ticket_id: number;
+  code: string;
+  event?: {
+    eventId?: number;
+    title?: string;
+    location?: string;
+    startTime?: string;
+    endTime?: string;
+  };
+}
+export interface UserTicketsResponse {
+  tickets: UserTicket[];
+}
+
+export const userApi = {
+  getMyTickets: (): Promise<UserTicketsResponse> =>
+    apiRequest<UserTicketsResponse>('/me/tickets'),
+};
+
