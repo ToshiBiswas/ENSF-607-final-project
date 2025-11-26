@@ -8,9 +8,7 @@ const MyInfo: React.FC = () => {
     const [editing, setEditing] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
-        email: "",
-        location: "",
-        preferredCategory: "",
+        email: ""
     });
 
     useEffect(() => {
@@ -26,8 +24,6 @@ const MyInfo: React.FC = () => {
             setFormData({
                 name: userData.name || "",
                 email: userData.email || "",
-                location: userData.preferences?.location || "",
-                preferredCategory: userData.preferences?.preferredCategory || "",
             });
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to load user data");
@@ -47,14 +43,6 @@ const MyInfo: React.FC = () => {
                 email: formData.email,
             });
             setUser(updatedUser);
-
-            // Update preferences
-            if (formData.location || formData.preferredCategory) {
-                await usersApi.setPreferences({
-                    location: formData.location || undefined,
-                    preferredCategory: formData.preferredCategory || undefined,
-                });
-            }
 
             setEditing(false);
             await loadUserData();
@@ -124,47 +112,6 @@ const MyInfo: React.FC = () => {
                             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009245] focus:border-[#009245]"
                         />
                     </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                            Location
-                        </label>
-                        <input
-                            type="text"
-                            value={formData.location}
-                            onChange={(e) =>
-                                setFormData({ ...formData, location: e.target.value })
-                            }
-                            placeholder="e.g., Calgary, AB"
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009245] focus:border-[#009245]"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                            Preferred Category
-                        </label>
-                        <select
-                            value={formData.preferredCategory}
-                            onChange={(e) =>
-                                setFormData({
-                                    ...formData,
-                                    preferredCategory: e.target.value,
-                                })
-                            }
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009245] focus:border-[#009245]"
-                        >
-                            <option value="">Select a category</option>
-                            <option value="Tech">Tech</option>
-                            <option value="Music">Music</option>
-                            <option value="Sports">Sports</option>
-                            <option value="Arts">Arts</option>
-                            <option value="Food">Food</option>
-                            <option value="Business">Business</option>
-                            <option value="Education">Education</option>
-                        </select>
-                    </div>
-
                     <div className="flex gap-3">
                         <button
                             onClick={handleSave}
@@ -179,9 +126,6 @@ const MyInfo: React.FC = () => {
                                     setFormData({
                                         name: user.name || "",
                                         email: user.email || "",
-                                        location: user.preferences?.location || "",
-                                        preferredCategory:
-                                            user.preferences?.preferredCategory || "",
                                     });
                                 }
                             }}
