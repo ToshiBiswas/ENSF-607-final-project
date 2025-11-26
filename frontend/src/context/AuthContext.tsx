@@ -59,25 +59,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loadUser();
   }, []);
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+  const login = async (email: string, password: string) => {
+    const response = await authApi.login({ email, password });
 
-const login = async (email: string, password: string) => {
-  setLoading(true);
-  try {
-    // Uses the same apiClient underneath
-    const res = await authApi.login({ email, password });
+    setToken(response.accessToken);
+    setUser(response.user);
 
-    // res: { accessToken, user }
-    setUser(res.user);
-    setToken(res.accessToken);
-
-    // so apiClient can pick it up
-    localStorage.setItem("token", res.accessToken);
-  } finally {
-    setLoading(false);
-  }
-};
-
+    localStorage.setItem('token', response.accessToken);
+    // refresh token is in HttpOnly cookie — NOT stored here
+  };
 
   const register = async (name: string, email: string, password: string) => {
     const response = await authApi.register({ name, email, password });
