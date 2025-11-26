@@ -12,7 +12,13 @@ import AIAdvice from "./components/AIAdvice";
 import PaymentInfo from "./components/PaymentInfo";
 import AdvicePage from "./pages/AdvicePage";
 import EventPageWithParams from "./pages/EventPage";
-
+import MyAccount from "@pages/MyAccount";
+import MyAccountDashboard from "@pages/MyAccountDashboard";
+import MyTickets  from "@pages/MyTickets";
+import MyInfo from "@pages/MyInfo";
+import MyPaymentInfo from "@pages/MyPaymentInfo";
+import TransactionHistory from "@pages/TransactionHistory";
+import { MyTicketPage } from "@pages/MyTicketPage";
 function App() {
   return (
     <AuthProvider>
@@ -37,7 +43,7 @@ function App() {
           {/* MyAccount with nested routes */}
           <Route path="/MyAccount" element={<MyAccount />}>
             <Route index element={<MyAccountDashboard />} />
-            <Route path="MyTickets" element={<MyTickets />} />
+            <Route path="MyTickets" element={<MyTicketPage />} />
             <Route path="MyInfo" element={<MyInfo />} />
             <Route path="MyPaymentInfo" element={<MyPaymentInfo />} />
             <Route path="TransactionHistory" element={<TransactionHistory />} />

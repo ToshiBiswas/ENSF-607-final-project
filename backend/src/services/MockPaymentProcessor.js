@@ -71,8 +71,7 @@ class MockPaymentProcessor {
       status: 'approved',
       payment_id: `mock_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
       currency: accCur,
-      balance_cents: Number(updated.balance_cents),
-      account: PaymentAccountRepo.toPublic(updated)
+      purchase: Number(amount),
     };
   }
 

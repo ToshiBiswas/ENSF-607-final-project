@@ -3,13 +3,28 @@ const { knex } = require('../config/db');
 
 class CartRepo {
   static async getOrCreateCartForUser(userId, trx = knex) {
-    let cart = await trx('carts').where({ user_id: userId }).first();
-    if (!cart) {
-      await trx('carts').insert({ user_id: userId });
-      cart = await trx('carts').where({ user_id: userId }).first();
+    const q = trx || knex;
+
+    // First try to find an existing cart
+    let cart = await q('carts').where({ user_id: userId }).first();
+    if (cart) return cart;
+
+    // If none found, try to insert one.
+    // Handle the case where another request inserts it at the same time.
+    try {
+      await q('carts').insert({ user_id: userId });
+    } catch (err) {
+      // If someone else created the cart in parallel, ignore the duplicate error.
+      if (err.code !== 'ER_DUP_ENTRY') {
+        throw err;
+      }
     }
+
+    // Now the cart definitely exists (either we created it, or another request did)
+    cart = await q('carts').where({ user_id: userId }).first();
     return cart;
   }
+
 
   static async addOrIncrementItem(cartId, infoId, qty, trx = knex) {
     const existing = await trx('cart_items').where({ cart_id: cartId, info_id: infoId }).first();
