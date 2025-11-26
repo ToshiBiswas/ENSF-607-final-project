@@ -135,7 +135,7 @@ export const usersApi = {
    * Get user payment history
    */
   getPayments: async (): Promise<Payment[]> => {
-    const response = await apiClient.get<PaymentsResponse>('/me/payments');
+    const response = await apiClient.get<PaymentsResponse>('/payments');
     return response.payments;
   },
 };

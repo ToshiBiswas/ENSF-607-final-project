@@ -15,6 +15,7 @@ const MyTickets: React.FC = () => {
             setLoading(true);
             setError(null);
             const data = await usersApi.getTickets();
+            console.log(data);
             setTickets(data);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to load tickets");

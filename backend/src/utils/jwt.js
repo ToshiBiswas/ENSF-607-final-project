@@ -208,6 +208,7 @@ async function requireAuth(req, res, next) {
 
     const user = await UserRepo.findById(userId);
     if (!user) {
+      console.log(user)
       return res
         .status(401)
         .json({ error: { code: 'UNAUTHORIZED', message: 'User not found' } });
