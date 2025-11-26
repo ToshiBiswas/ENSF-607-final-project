@@ -59,44 +59,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loadUser();
   }, []);
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+  const login = async (email: string, password: string) => {
+    const response = await authApi.login({ email, password });
 
-const login = async (email: string, password: string) => {
-  const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include", // if you're using cookies/JWT in cookies
-    body: JSON.stringify({ email, password }),
-  });
+    setToken(response.accessToken);
+    setUser(response.user);
 
-  if (!res.ok) {
-    // 👇 handle invalid credentials specifically
-    if (res.status === 401) {
-      const error = new Error("Invalid email or password");
-      (error as any).status = 401; // optional: keep status if you want to inspect it later
-      throw error;
-    }
-
-    // generic error for other status codes
-    let message = "Login failed. Please try again.";
-    try {
-      const data = await res.json();
-      if (data?.message) message = data.message;
-    } catch {
-      // ignore JSON parse errors
-    }
-    throw new Error(message);
-  }
-
-  const data = await res.json();
-
-  // whatever you already do with the token/user:
-  // setUser(data.user);
-  // setToken(data.token);
-};
-
+    localStorage.setItem('token', response.accessToken);
+    // refresh token is in HttpOnly cookie — NOT stored here
+  };
 
   const register = async (name: string, email: string, password: string) => {
     const response = await authApi.register({ name, email, password });
