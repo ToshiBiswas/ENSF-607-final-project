@@ -97,32 +97,46 @@ class CartService {
   static async getCart(user) {
     return knex.transaction(async (trx) => {
       const cartRow = await CartRepo.getOrCreateCartForUser(user.userId, trx);
-      const items   = await CartRepo.getItems(cartRow.cart_id, trx);
-      console.log(items);
-      let itemsNew = [];
-      for(const i in items){
-        console.log(items[i].event_id)
-        const event = await EventRepo.findById(items[i].event_id)
-        console.log(event)
-        if(event.purchasable()){
-          itemsNew.push(items[i])
-        }else{
-          CartRepo.removeItem(cartRow.cart_id, items[i].info_id,trx)
+
+      // Just in case: don't let cartRow be undefined/null
+      if (!cartRow) {
+        throw new AppError('Failed to load cart', 500, { code: 'CART_NOT_FOUND' });
+      }
+
+      const items = await CartRepo.getItems(cartRow.cart_id, trx);
+
+      // Filter out items for events that are no longer purchasable
+      const filteredItems = [];
+      for (const item of items) {
+        const event = await EventRepo.findById(item.event_id);
+        if (event && typeof event.purchasable === 'function' && event.purchasable()) {
+          filteredItems.push(item);
+        } else {
+          // remove from cart if event is not purchasable anymore
+          await CartRepo.removeItem(cartRow.cart_id, item.info_id, trx);
         }
       }
-      const cartItems = await CartRepo.getItems(cartRow.cart_id);
+
+      // You can re-query, or just use filteredItems; using filteredItems is fine:
+      const cartItems = filteredItems;
 
       return new DBCart({
-        user,
+        owner: user,       // DBCart expects { owner, cartRow, items }
         cartRow,
-        items: cartItems || [],   // safe even if the query returns null/undefined
-      });    
+        items: cartItems || [],
+      });
     });
   }
 
   static async clear(user) {
     return knex.transaction(async (trx) => {
       const cartRow = await CartRepo.getOrCreateCartForUser(user.userId, trx);
+
+      if (!cartRow) {
+        // nothing to clear; just return an empty cart shape
+        return new DBCart({ owner: user, cartRow: null, items: [] });
+      }
+
       await CartRepo.clear(cartRow.cart_id, trx);
       return new DBCart({ owner: user, cartRow, items: [] });
     });
