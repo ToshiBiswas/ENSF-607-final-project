@@ -104,9 +104,7 @@ class AuthController {
    * (handy for Postman / manual testing).
    */
   static refresh = asyncHandler(async (req, res) => {
-    const cookieToken = req.cookies && req.cookies[REFRESH_COOKIE_NAME];
-    const bodyToken = req.body && req.body.refreshToken;
-    const refreshToken = cookieToken || bodyToken;
+    const refreshToken = req.cookies && req.cookies[REFRESH_COOKIE_NAME];
 
     if (!refreshToken) {
       return res.status(401).json({

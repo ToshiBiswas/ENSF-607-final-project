@@ -8,7 +8,6 @@ exports.up = async (knex) => {
     t.enu('role', ['user', 'admin'], { useNative: true, enumName: 'user_role' })
       .notNullable().defaultTo('user');
     t.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
-    t.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
   });
 };
 
