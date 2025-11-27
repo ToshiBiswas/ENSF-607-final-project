@@ -37,7 +37,7 @@ const Events: React.FC = () => {
         try {
             setLoading(true);
             setError(null);
-            const data = await eventsApi.getByCategory(selectedCategory || undefined);
+            const data = await eventsApi.getByCategory(selectedCategory || undefined, 10000);
             setEvents(data);
             setFilteredEvents(data);
         } catch (err) {

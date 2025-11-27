@@ -46,7 +46,7 @@ const Logo: React.FC<LogoProps> = ({
 
     if (clickable) {
         return (
-            <Link to="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
+            <Link to="/events" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
                 {logoImage}
             </Link>
         );

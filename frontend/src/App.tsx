@@ -1,12 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import Homepage from "./pages/homepage";
-import MyAccount from "./pages/MyAccount";
-import MyAccountDashboard from "./pages/MyAccountDashboard";
-import MyTickets from "./pages/MyTickets";
-import MyInfo from "./pages/MyInfo";
-import MyPaymentInfo from "./pages/MyPaymentInfo";
-import TransactionHistory from "./pages/TransactionHistory";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Events from "./pages/Events";
@@ -20,7 +14,7 @@ import AdvicePage from "./pages/AdvicePage";
 import EventPageWithParams from "./pages/EventPage";
 import MyAccount from "@pages/MyAccount";
 import MyAccountDashboard from "@pages/MyAccountDashboard";
-import MyTickets  from "@pages/MyTickets";
+import MyTickets from "@pages/MyTickets";
 import MyInfo from "@pages/MyInfo";
 import MyPaymentInfo from "@pages/MyPaymentInfo";
 import TransactionHistory from "@pages/TransactionHistory";
@@ -34,8 +28,10 @@ function App() {
 
         {/* Routes define what component appears for each URL path */}
         <Routes>
-          {/* Homepage */}
-          <Route path="/" element={<Homepage />} />
+          {/* Default route shows Events */}
+          <Route path="/" element={<Events />} />
+          {/* Optional homepage route if needed */}
+          <Route path="/home" element={<Homepage />} />
           
           {/* Authentication routes */}
           <Route path="/login" element={<Login />} />

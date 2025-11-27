@@ -138,5 +138,19 @@ export const usersApi = {
     const response = await apiClient.get<PaymentsResponse>('/payments');
     return response.payments;
   },
+
+  /**
+   * Delete a payment method
+   */
+  deletePaymentMethod: async (paymentInfoId: number): Promise<void> => {
+    await apiClient.delete(`/me/payment-methods/${paymentInfoId}`);
+  },
+
+  /**
+   * Refund a ticket
+   */
+  refundTicket: async (ticketId: number): Promise<{ success: boolean; message: string }> => {
+    return await apiClient.post('/payments/refund', { ticketId });
+  },
 };
 

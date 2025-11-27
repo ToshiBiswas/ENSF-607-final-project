@@ -10,6 +10,7 @@ export default function Cart() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState<number | null>(null); //tracks which item is being updated
+  const [quantityDrafts, setQuantityDrafts] = useState<Record<number, string>>({});
 
   //load cart when component mounts
   useEffect(() => {
@@ -35,6 +36,27 @@ export default function Cart() {
     }
   };
 
+  //keep editable quantities in sync with cart data
+  useEffect(() => {
+    if (cart?.items) {
+      const map: Record<number, string> = {};
+      cart.items.forEach((item) => {
+        map[item.info_id] = String(item.quantity ?? 1);
+      });
+      setQuantityDrafts(map);
+    } else {
+      setQuantityDrafts({});
+    }
+  }, [cart]);
+
+  const handleQuantityInputChange = (infoId: number, value: string) => {
+    const digitsOnly = value.replace(/\D/g, '');
+    setQuantityDrafts((prev) => ({
+      ...prev,
+      [infoId]: digitsOnly,
+    }));
+  };
+
   //function to update item quantity
   const handleUpdateQuantity = async (infoId: number, newQuantity: number) => {
     if (newQuantity < 0) return; //dont allow negative quantities
@@ -49,6 +71,24 @@ export default function Cart() {
     } finally {
       setUpdating(null);
     }
+  };
+
+  const commitQuantityChange = (item: CartItem) => {
+    const draftValue = quantityDrafts[item.info_id];
+    let nextQty = Number.parseInt(draftValue ?? '', 10);
+    if (Number.isNaN(nextQty) || nextQty < 1) {
+      nextQty = item.quantity;
+    }
+
+    if (nextQty === item.quantity) {
+      setQuantityDrafts((prev) => ({
+        ...prev,
+        [item.info_id]: String(item.quantity),
+      }));
+      return;
+    }
+
+    handleUpdateQuantity(item.info_id, nextQty);
   };
 
   //function to remove item from cart (set quantity to 0)
@@ -140,24 +180,23 @@ export default function Cart() {
                         <p className="text-sm text-gray-600">Price: ${formatPrice(item.unit_price_cents)} each</p>
                       </div>
                       <div className="flex items-center gap-4">
-                        {/*quantity controls*/}
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleUpdateQuantity(item.info_id, item.quantity - 1)}
-                            disabled={updating === item.info_id || item.quantity <= 1}
-                            className="w-8 h-8 rounded-full border border-gray-300 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-                          >
-                            -
-                          </button>
-                          <span className="w-12 text-center font-semibold text-gray-900">{item.quantity}</span>
-                          <button
-                            onClick={() => handleUpdateQuantity(item.info_id, item.quantity + 1)}
-                            disabled={updating === item.info_id}
-                            className="w-8 h-8 rounded-full border border-gray-300 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-                          >
-                            +
-                          </button>
-                        </div>
+                      <div className="flex flex-col items-center">
+                        <label className="text-xs text-gray-500 mb-1">Quantity</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={quantityDrafts[item.info_id] ?? String(item.quantity)}
+                          onChange={(e) => handleQuantityInputChange(item.info_id, e.target.value)}
+                          onBlur={() => commitQuantityChange(item)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.currentTarget.blur();
+                            }
+                          }}
+                          disabled={updating === item.info_id}
+                          className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+                        />
+                      </div>
                         <div className="text-right">
                           <p className="text-lg font-bold text-gray-900">
                             ${formatPrice(item.unit_price_cents * item.quantity)}

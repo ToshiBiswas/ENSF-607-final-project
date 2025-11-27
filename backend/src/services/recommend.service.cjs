@@ -65,7 +65,9 @@ ${JSON.stringify(list, null, 2)}
     let parsed;
     try {
       parsed = JSON.parse(text);
-    } catch (_) {
+    } catch (parseErr) {
+      console.error('[Recommend] Failed to parse AI response:', parseErr.message);
+      console.error('[Recommend] AI response text:', text.substring(0, 200));
       return { recommended_event: null, note: 'Could not parse AI response.' };
     }
 
@@ -76,25 +78,36 @@ ${JSON.stringify(list, null, 2)}
     }
     const safe = RecommendedSchema.safeParse(rec);
     if (!safe.success) {
+      console.error('[Recommend] AI response validation failed:', safe.error);
       return { recommended_event: null, note: 'AI response missing fields.' };
     }
 
+    console.log('[Recommend] AI recommendation successful');
     return { recommended_event: safe.data };
   } catch (err) {
     // Fallback: pick first event locally if AI call fails
+    console.error('[Recommend] AI call failed, using fallback:', err.message);
+    console.error('[Recommend] Error details:', err);
     const first = list[0];
+    if (first) {
+      // Generate a user-friendly reason based on the event
+      const reason = `This ${first.category} event matches your interest in "${eventType}" and is available at ${first.location}.`;
+      return {
+        recommended_event: {
+          id: first.id,
+          name: first.name,
+          category: first.category,
+          date: first.date,
+          location: first.location,
+          reason: reason,
+        },
+        note: undefined,
+        error: err?.message,
+      };
+    }
     return {
-      recommended_event: first
-        ? {
-            id: first.id,
-            name: first.name,
-            category: first.category,
-            date: first.date,
-            location: first.location,
-            reason: 'Closest match from local events (AI unavailable).',
-          }
-        : null,
-      note: first ? undefined : 'AI unavailable and no events found.',
+      recommended_event: null,
+      note: 'No events found for that type right now.',
       error: err?.message,
     };
   }

@@ -50,6 +50,7 @@ r.post('/cart/checkout', requireAuth, CartController.checkout);
 r.post('/payments/verify-card', requireAuth, PaymentsController.verifyCard);
 r.delete('/me/payment-methods/:paymentInfoId', requireAuth, PaymentsController.deletePaymentMethod);
 r.get('/payments', requireAuth, PaymentsController.listMyPayments);
+r.post('/payments/refund', requireAuth, PaymentsController.refund);
 
 /* ---------- NOTIFICATIONS ---------- */
 // Processes and sends all pending notifications due as of "now"

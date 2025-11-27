@@ -1,7 +1,44 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { usersApi } from "../api/users";
 
 const MyAccountDashboard: React.FC = () => {
+    const [paymentMethods, setPaymentMethods] = useState<Array<{
+        paymentInfoId: number;
+        name: string;
+        last4: string;
+        expMonth: number;
+        expYear: number;
+    }>>([]);
+    const [loadingPayments, setLoadingPayments] = useState(true);
+    const [paymentError, setPaymentError] = useState<string | null>(null);
+
+    useEffect(() => {
+        let isMounted = true;
+        async function loadPaymentMethods() {
+            try {
+                setLoadingPayments(true);
+                setPaymentError(null);
+                const methods = await usersApi.getPaymentMethods();
+                if (isMounted) {
+                    setPaymentMethods(methods);
+                }
+            } catch (err) {
+                if (isMounted) {
+                    setPaymentError('Unable to load saved cards right now.');
+                    setPaymentMethods([]);
+                }
+            } finally {
+                if (isMounted) {
+                    setLoadingPayments(false);
+                }
+            }
+        }
+        loadPaymentMethods();
+        return () => {
+            isMounted = false;
+        };
+    }, []);
     return (
         <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-2xl font-bold text-slate-800 mb-6">Account Dashboard</h2>
@@ -74,6 +111,52 @@ const MyAccountDashboard: React.FC = () => {
                         </div>
                     </div>
                 </Link>
+            </div>
+
+            <div className="mt-8 border-t border-slate-200 pt-6">
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 className="text-xl font-semibold text-slate-800">Saved Payment Methods</h3>
+                        <p className="text-slate-500 text-sm">Cards you can use during checkout</p>
+                    </div>
+                    <Link
+                        to="/MyAccount/MyPaymentInfo"
+                        className="px-4 py-2 bg-[#009245] text-white rounded-lg hover:bg-[#056733] transition-colors text-sm font-semibold"
+                    >
+                        Manage Cards
+                    </Link>
+                </div>
+
+                {loadingPayments ? (
+                    <div className="text-slate-500 text-sm">Loading cards…</div>
+                ) : paymentError ? (
+                    <div className="text-red-600 text-sm">{paymentError}</div>
+                ) : paymentMethods.length === 0 ? (
+                    <div className="text-slate-500 text-sm">No cards saved yet.</div>
+                ) : (
+                    <ul className="space-y-3">
+                        {paymentMethods.slice(0, 3).map((method) => (
+                            <li
+                                key={method.paymentInfoId}
+                                className="border border-slate-200 rounded-lg p-4 flex items-center justify-between"
+                            >
+                                <div>
+                                    <p className="text-slate-800 font-semibold">
+                                        •••• {method.last4}
+                                    </p>
+                                    <p className="text-slate-500 text-sm">
+                                        {method.name} • Expires {method.expMonth.toString().padStart(2, "0")}/{method.expYear}
+                                    </p>
+                                </div>
+                            </li>
+                        ))}
+                        {paymentMethods.length > 3 && (
+                            <li className="text-slate-500 text-sm">
+                                + {paymentMethods.length - 3} more saved {paymentMethods.length - 3 === 1 ? "card" : "cards"}
+                            </li>
+                        )}
+                    </ul>
+                )}
             </div>
         </div>
     );
