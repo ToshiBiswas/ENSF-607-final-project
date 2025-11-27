@@ -9,7 +9,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:unit": "jest --selectProjects=unit",
-    "test:int": "jest --selectProjects=integration",
+    "test:int": "jest --selectProjects=integration --runInBand",
     "test:coverage": "jest --coverage",
     "rollback": "knex migrate:rollback",
     "migrate": "knex migrate:latest --env production",
