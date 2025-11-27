@@ -8,10 +8,12 @@
     "start": "node -r dotenv/config src/server.js",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:unit": "jest --selectProjects=unit",
+    "test:int": "jest --selectProjects=integration",
     "test:coverage": "jest --coverage",
     "rollback": "knex migrate:rollback",
-    "migrate": "knex migrate:latest --env development",
-    "seed": "knex seed:run --env development"
+    "migrate": "knex migrate:latest --env production",
+    "seed": "knex seed:run --env production"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

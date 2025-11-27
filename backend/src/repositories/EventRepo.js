@@ -131,6 +131,19 @@ static async toDomain(row) {
   }
   /** List events matching a category value */
   static async findByCategoryValue(value) {
+    const v = String(value || '').trim();
+    if (!v) return [];
+
+    const rows = await knex('events as e')
+      .join('eventscategories as ec', 'e.event_id', 'ec.event_id')
+      .join('categoriesid as c', 'c.category_id', 'ec.category_id')
+      .whereRaw('LOWER(c.category_value) = ?', [v.toLowerCase()])
+      .select('e.*');
+
+    return Promise.all(rows.map((r) => this.toDomain(r)));
+  }
+
+  static async findByCategoryValue(value) {
     const rows = await knex('events as e')
       .join('eventscategories as ec', 'e.event_id', 'ec.event_id')
       .join('categoriesid as c', 'c.category_id', 'ec.category_id')
@@ -138,7 +151,6 @@ static async toDomain(row) {
       .select('e.*');
     return Promise.all(rows.map((r) => this.toDomain(r)));
   }
-
   /** Lightweight finder for recommendation: match category value or title substring */
   static async findByCategoryOrTitle(value) {
     const v = String(value || '').trim();
@@ -299,45 +311,69 @@ static async toDomain(row) {
   }
 
   /** Hard delete an event (cascade behaviour relies on FKs) */
+// In EventRepo.js
+
   static async deleteEvent(eventId) {
+    const id = Number(eventId);
+
     await knex.transaction(async (trx) => {
-      // Delete minted tickets for this event if the 'tickets' table exists
+      // Check if tickets table exists (for compatibility with older schemas)
       let hasTicketsTable = false;
       try {
         hasTicketsTable = await trx.schema.hasTable('tickets');
       } catch (_) {
         /* ignore */
       }
-      const row = await knex('events')
-        .where({ event_id: eventId})
-        .first()
-        .select('event_id as eventId', 
-          ' payment_info_id as pinfoId'
-        );
-      const exists= await trx('user_cards')
-        .where({ payment_info_id: row.pinfoId })
+
+      // Get the event + its payment_info_id using the transaction connection
+      const row = await trx('events')
+        .select('event_id as eventId', 'payment_info_id as pinfoId')
+        .where({ event_id: id })
         .first();
-      if (!exists) {
-        const usedInPayments = await trx('payments')
-          .where({ payment_info_id: row.pinfoId })
+
+      // If the event doesn't exist, nothing to do
+      if (!row) {
+        return;
+      }
+
+      const { pinfoId } = row;
+
+      // Only try to clean up paymentinfo if this event actually has one
+      if (pinfoId != null) {
+        // Is this payment info used by any saved card?
+        const usedByCards = await trx('user_cards')
+          .where({ payment_info_id: pinfoId })
           .first();
-        const usedInEvents = await trx('events')
-          .where({payment_info_id: row.pinfoId})
-          .first()
-        if (!(usedInPayments || usedInEvents)) {
+
+        // Is it used by any payments?
+        const usedByPayments = await trx('payments')
+          .where({ payment_info_id: pinfoId })
+          .first();
+
+        // Is it used by any *other* events (not this one)?
+        const usedByOtherEvents = await trx('events')
+          .where({ payment_info_id: pinfoId })
+          .andWhere('event_id', '!=', id)
+          .first();
+
+        // Only delete paymentinfo if literally nothing else references it
+        if (!usedByCards && !usedByPayments && !usedByOtherEvents) {
           await trx('paymentinfo')
-            .where({ payment_info_id: row.pinfoId })
+            .where({ payment_info_id: pinfoId })
             .del();
         }
       }
-      // Delete ticket types for this event
-      await trx('ticketinfo').where({ event_id: eventId }).del();
-      if (hasTicketsTable) {
-        await trx('tickets').where({ event_id: eventId }).del();
-      }
-      // Finally delete the event row
-      await trx('events').where({ event_id: eventId }).del();
 
+      // Delete ticket types for this event
+      await trx('ticketinfo').where({ event_id: id }).del();
+
+      // Delete minted tickets, if the tickets table exists in this schema
+      if (hasTicketsTable) {
+        await trx('tickets').where({ event_id: id }).del();
+      }
+
+      // Finally delete the event row itself
+      await trx('events').where({ event_id: id }).del();
     });
   }
 

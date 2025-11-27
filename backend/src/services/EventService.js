@@ -69,22 +69,66 @@ class EventService {
       location,
       startTime,
       endTime,
-      ticketType = 'general',
       categories = [],
       ticketInfos = [],
-      payment,       // { paymentInfoId?: number, newCard?: { number, name, ccv, exp_month, exp_year } }
+      payment,       // { existingCard?: number, newCard?: { number, name, ccv, exp_month, exp_year } }
     } = {}
   ) {
     const normTitle = normalizeTitle(title);
 
-    // Basic required fields
+    // Basic required fields present?
     if (!normTitle || !location || !startTime || !endTime) {
       throw new AppError('Missing required fields', 400, {
         code: 'BAD_EVENT_FIELDS',
       });
     }
 
-    // Unique (CI) by title
+    // ------------------------------
+    // Time window validation
+    // ------------------------------
+    const now = new Date();
+
+    // Allow either Date objects or ISO strings
+    const start = startTime instanceof Date ? startTime : new Date(startTime);
+    const end   = endTime   instanceof Date ? endTime   : new Date(endTime);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      throw new AppError('Invalid start or end time', 400, {
+        code: 'BAD_EVENT_TIME',
+      });
+    }
+
+    if (start <= now) {
+      throw new AppError('Event must start in the future', 400, {
+        code: 'START_TIME_IN_PAST',
+        now: now.toISOString(),
+        startTime: start.toISOString(),
+      });
+    }
+
+    const maxEnd = new Date(start.getTime() + 60 * 60 * 1000); // start + 1 hour
+
+    // must end after it starts, and strictly before start + 1 hour
+    if (end <= start || end >= maxEnd) {
+      throw new AppError(
+        'Event duration must be greater than 0 and less than 1 hour',
+        400,
+        {
+          code: 'BAD_EVENT_DURATION',
+          startTime: start.toISOString(),
+          endTime: end.toISOString(),
+          maxEndTime: maxEnd.toISOString(),
+        }
+      );
+    }
+
+    // Use the normalized Date objects from here on so DB gets consistent values
+    startTime = start;
+    endTime = end;
+
+    // ------------------------------
+    // Unique (CI) title
+    // ------------------------------
     if (await EventRepo.existsTitleCI(normTitle)) {
       throw new AppError('An event with this title already exists', 409, {
         code: 'DUPLICATE_TITLE',
@@ -98,7 +142,6 @@ class EventService {
     let resolvedPaymentInfoId;
 
     if (existingCard != null) {
-      // Use existing saved payment method
       const pid = Number(existingCard);
       if (!Number.isInteger(pid) || pid <= 0) {
         throw new AppError('Invalid paymentInfoId', 400, {
@@ -117,12 +160,10 @@ class EventService {
 
       resolvedPaymentInfoId = pid;
     } else if (newCard) {
-      // Create + store a new card for this organizer, then use it
       const { PaymentService } = require('./PaymentService');
       const stored = await PaymentService.verifyAndStore(organizerId, newCard);
       resolvedPaymentInfoId = stored.paymentInfoId;
     } else {
-      // No payment method given at all
       throw new AppError('payment method is required', 400, {
         code: 'PAYMENT_INFO_REQUIRED',
       });
@@ -133,7 +174,6 @@ class EventService {
     // ------------------------------
     const categoryIds = await resolveCategoryIdsStrict(categories);
 
-    // Insert event with its single paymentInfoId
     const evt = await EventRepo.insert({
       organizerId,
       title: normTitle,
@@ -153,29 +193,6 @@ class EventService {
     }
 
     return EventRepo.findById(evt.eventId);
-  }    
-  /**
-   * List events for a given category value (must exist in categories table).
-   * @param {string} categoryValue
-   * @returns {Promise<Event[]>}
-   */
-    static async listByCategory(categoryValue) {
-    const value = String(categoryValue ?? '').trim();
-    if (!value) {
-      throw new AppError('category is required', 400, { code: 'CATEGORY_REQUIRED' });
-    }
-    // Ensure the category exists (no auto-create)
-    const rows = await EventRepo.getCategoriesByValues([value]);
-    if (!rows.length) {
-      throw new AppError(`Category not found: ${value}`, 404, {
-        code: 'CATEGORY_NOT_FOUND',
-        value
-      });
-    }
-    const events = EventRepo.findByCategoryValue(value);
-
-    // Return hydrated Event domain objects for that category
-    return events
   }
 
 
