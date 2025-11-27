@@ -57,6 +57,9 @@ r.get('/notifications/due', requireAuth, NotificationController.getDue);
 
 // Create/schedule a new notification for an event (requires body.eventId)
 r.post('/notifications', requireAuth, NotificationController.create);
+
+// Delete/mark as read a notification
+r.delete('/notifications/:id', requireAuth, NotificationController.delete);
 /* ---------- TICKETS ---------- */
 r.get('/me/tickets', requireAuth, TicketsController.getMyTickets);
 r.get('/tickets/:id',requireAuth, TicketsController.getTicketById)

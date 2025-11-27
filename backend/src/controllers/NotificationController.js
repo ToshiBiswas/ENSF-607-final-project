@@ -43,6 +43,28 @@ class NotificationController {
 
     res.status(201).json({ notification: note });
   });
+
+  /**
+   * DELETE /api/notifications/:id
+   * Mark a notification as read by deleting it
+   */
+  static delete = asyncHandler(async (req, res) => {
+    const notificationId = Number(req.params.id);
+    const userId = req.user.userId;
+
+    if (!Number.isInteger(notificationId) || notificationId <= 0) {
+      return res.status(400).json({ error: 'Invalid notification ID' });
+    }
+
+    const { NotificationRepo } = require('../repositories/NotificationRepo');
+    const result = await NotificationRepo.deleteForUser(notificationId, userId);
+
+    if (result.deleted === 0) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
+
+    res.json({ success: true, deleted: result.deleted });
+  });
   
 }
 

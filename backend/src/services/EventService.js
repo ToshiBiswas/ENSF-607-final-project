@@ -188,6 +188,15 @@ class EventService {
       await EventRepo.attachCategories(evt.eventId, categoryIds);
     }
 
+    // Create notification for organizer when event is created
+    await NotificationService.queue({
+      userId: organizerId,
+      eventId: evt.eventId,
+      title: 'event_created',
+      message: `Your event "${normTitle}" has been created successfully!`,
+      sendAt: new Date() // Send immediately
+    });
+
     if (Array.isArray(ticketInfos) && ticketInfos.length) {
       await EventRepo.upsertTicketInfos(evt.eventId, ticketInfos);
     }
@@ -242,7 +251,17 @@ class EventService {
       await EventRepo.updateTicketsIncreaseOnly(eventId, ticketInfosIncreaseOnly);
     }
 
-    return EventRepo.findById(eventId);
+    // Notify organizer when event is updated
+    const updatedEvent = await EventRepo.findById(eventId);
+    await NotificationService.queue({
+      userId: organizerId,
+      eventId: eventId,
+      title: 'event_updated',
+      message: `Your event "${updatedEvent.title}" has been updated.`,
+      sendAt: new Date() // Send immediately
+    });
+
+    return updatedEvent;
   }
     /**
    * List events for a given category value, with pagination.
@@ -325,18 +344,20 @@ class EventService {
 
         await NotificationService.queue({
           userId: purchaserUserId,
-          title: 'refund_issued',
-          message: `Event canceled. Your payment ${paymentId} (purchase ${purchaseId}) was refunded.`,
           eventId: id,
+          title: 'refund_issued',
+          message: `Event "${evt.title}" was canceled. Your payment (ID: ${paymentId}) has been refunded.`,
+          sendAt: new Date()
         });
       } catch (e) {
         console.warn('Refund failed', purchaseId, e?.message || e);
 
         await NotificationService.queue({
           userId: purchaserUserId,
-          title: 'refund_failed',
-          message: `The refund for payment ${paymentId} could not be processed.`,
           eventId: id,
+          title: 'refund_failed',
+          message: `The refund for payment ${paymentId} could not be processed. Please contact support.`,
+          sendAt: new Date()
         });
       }
     }
@@ -348,21 +369,13 @@ class EventService {
     }
 
     // Organizer heads-up
-    if (typeof NotificationService?.create === 'function') {
-      await NotificationService.create({
-        userId: organizerId,
-        title: 'event_canceled',
-        message: `Your event ${evt.title} was canceled`,
-        eventId: id
-      });
-    } else if (typeof NotificationService?.notify === 'function') {
-      await NotificationService.notify({
-        userId: organizerId,
-        type: 'event_canceled',
-        message: `Your event ${evt.title} was canceled`,
-        eventId: id
-      });
-    }
+    await NotificationService.queue({
+      userId: organizerId,
+      eventId: id,
+      title: 'event_canceled',
+      message: `Your event "${evt.title}" was canceled. All purchasers have been refunded.`,
+      sendAt: new Date()
+    });
 
     await EventRepo.deleteEvent(id);
     return { deleted: true };
@@ -432,14 +445,13 @@ class EventService {
           });
 
           // Optional: notify organizer that they got paid
-          if (NotificationService && typeof NotificationService.create === 'function') {
-            await NotificationService.create({
-              userId: organizerId,
-              title: 'event_payout',
-              message: `Your event "${title}" was settled. You earned ${(payoutCents / 100).toFixed(2)} from ticket sales.`,
-              eventId,
-            });
-          }
+          await NotificationService.queue({
+            userId: organizerId,
+            eventId: eventId,
+            title: 'event_payout',
+            message: `Your event "${title}" was settled. You earned $${(payoutCents / 100).toFixed(2)} from ticket sales.`,
+            sendAt: new Date()
+          });
         } catch (e) {
           // If payout recording fails, we still delete the event but capture the error in the summary
           payoutRecord = { error: String(e.message || e) };
