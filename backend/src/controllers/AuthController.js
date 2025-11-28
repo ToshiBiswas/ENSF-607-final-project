@@ -75,37 +75,35 @@ class AuthController {
    * Body: { email, password }
    */
   static login = asyncHandler(async (req, res) => {
-    const emailInput = typeof email === 'string' ? email.trim() : '';
-    const passwordInput = typeof password === 'string' ? password : '';
-
-    if (!emailInput || !passwordInput) {
-      throw new AppError('Email and password are required', 400, { code: 'MISSING_FIELDS' });
-    }
-    const row = await UserRepo.findAuthByEmail(emailInput);
-    if (!row) {
-      return res.status(401).json({
-        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' },
-      });
-    }
-
-    const ok = await bcrypt.compare(passwordInput, row.password_hash);
-    if (!ok) {
-      return res.status(401).json({
-        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' },
-      });
-    }
-
-    // load domain user (no password) for responses
-    const user = await UserRepo.findById(row.user_id);
-
-    const { accessToken, refreshToken } = await generateTokenPair(user);
-    setRefreshCookie(res, refreshToken);
-
-    res.json({
-      accessToken,
-      user,
+    const { email, password } = req.body;
+  if (!email || !password) {
+    throw new AppError('Email and password are required', 400, { code: 'MISSING_FIELDS' });
+  }
+  const row = await UserRepo.findAuthByEmail(email);
+  if (!row) {
+    return res.status(401).json({
+      error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' },
     });
+  }
+
+  const ok = await bcrypt.compare(password, row.password_hash);
+  if (!ok) {
+    return res.status(401).json({
+      error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' },
+    });
+  }
+
+  // load domain user (no password) for responses
+  const user = await UserRepo.findById(row.user_id);
+
+  const { accessToken, refreshToken } = await generateTokenPair(user);
+  setRefreshCookie(res, refreshToken);
+
+  res.json({
+    accessToken,
+    user,
   });
+});
 
   /**
    * POST /api/auth/refresh
