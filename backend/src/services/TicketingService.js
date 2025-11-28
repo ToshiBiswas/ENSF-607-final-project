@@ -276,7 +276,6 @@ static async validateTicket({ currentUser, eventId, code }) {
         minted.push(...mintedBatch);
 
         // 5. Queue notifications – safe to use non-trx here since it's just an insert
-        evt = await EventRepo.findById(locked.row.event_id);
         await NotificationService.queue({
           userId: user.userId,
           eventId: locked.row.event_id,
