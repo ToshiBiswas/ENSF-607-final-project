@@ -2,7 +2,7 @@
  * Users API
  */
 import { apiClient } from './client';
-import { type User } from './auth';
+import type  {  User } from './auth';
 
 export interface UpdateProfileRequest {
   name?: string;
@@ -66,6 +66,11 @@ export interface Payment {
   currency: string;
   status: 'approved' | 'declined' | 'pending' | 'refunded';
   refundedCents: number;
+  events?: Array<{
+    eventId: number;
+    title: string;
+    venue?: string;
+  }>;
   event?: {
     eventId: number;
     title: string;
@@ -83,7 +88,12 @@ export interface Payment {
 }
 
 export interface TicketsResponse {
-  tickets: Ticket[];
+  message?: string;
+  page?: number;
+  pageSize?: number;
+  total?: number;
+  data?: Ticket[];
+  tickets?: Ticket[];
 }
 
 export interface PaymentsResponse {
@@ -123,12 +133,27 @@ export const usersApi = {
     return response.paymentMethods;
   },
 
+
+
   /**
-   * Get user tickets
+   * Get user tickets with pagination and filters
    */
-  getTickets: async (): Promise<Ticket[]> => {
-    const response = await apiClient.get<TicketsResponse>('/me/tickets');
-    return response.tickets;
+  getTickets: async (params?: {
+    page?: number;
+    pageSize?: number;
+    status?: string;
+    upcoming?: boolean;
+    eventId?: number;
+  }): Promise<TicketsResponse> => {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.pageSize) queryParams.append('pageSize', params.pageSize.toString());
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.upcoming !== undefined) queryParams.append('upcoming', params.upcoming.toString());
+    if (params?.eventId) queryParams.append('eventId', params.eventId.toString());
+
+    const endpoint = `/me/tickets${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return await apiClient.get<TicketsResponse>(endpoint);
   },
 
   /**

@@ -90,17 +90,22 @@ class UserCardRepo {
 
   // Helpful for listing a user's saved cards
   static async listForUser(userId) {
-    return knex('user_cards as uc')
+    const results = await knex('user_cards as uc')
       .join('paymentinfo as pi', 'pi.payment_info_id', 'uc.payment_info_id')
       .where('uc.user_id', userId)
       .select(
         'pi.payment_info_id as paymentInfoId',
+        'pi.account_id as accountId',
         'pi.name',
         'pi.last4',
         'pi.exp_month as expMonth',
-        'pi.exp_year as expYear'
+        'pi.exp_year as expYear',
+        'pi.currency'
       )
       .orderBy('pi.payment_info_id', 'desc');
+    
+    //add primary field (default to false for now, can be enhanced later)
+    return results.map(r => ({ ...r, primary: false }));
   }
     /**
    * Drop the user ↔ payment_info link.

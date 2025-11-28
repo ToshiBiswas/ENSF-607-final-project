@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import './MyPaymentInfoPage.css';
+import { usersApi } from '../api/users';
+import { paymentsApi } from '../api/payments';
 
 type PaymentMethod = {
   paymentInfoId: number;
@@ -10,12 +12,6 @@ type PaymentMethod = {
   expYear: number;
   currency: string;
 };
-
-type PaymentMethodsResponse = {
-  paymentMethods: PaymentMethod[];
-};
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api';
 
 export function MyPaymentInfoPage() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -39,27 +35,8 @@ export function MyPaymentInfoPage() {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('Please log in to view your payment methods');
-      }
-
-      const res = await fetch(`${API_BASE_URL}/me/payment-methods`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          throw new Error('Please log in to view your payment methods');
-        }
-        throw new Error(`Failed to load payment methods (status ${res.status})`);
-      }
-
-      const data: PaymentMethodsResponse = await res.json();
-      setPaymentMethods(data.paymentMethods ?? []);
+      const paymentMethods = await usersApi.getPaymentMethods();
+      setPaymentMethods(paymentMethods);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load payment methods');
     } finally {
@@ -71,26 +48,13 @@ export function MyPaymentInfoPage() {
     setSaving(true);
     setError(null);
     try {
-      const token = localStorage.getItem('authToken');
-      const res = await fetch(`${API_BASE_URL}/payments/verify-card`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          number: formData.number.replace(/\s/g, ''),
-          name: formData.name,
-          ccv: formData.ccv,
-          exp_month: parseInt(formData.exp_month, 10),
-          exp_year: parseInt(formData.exp_year, 10),
-        }),
+      await paymentsApi.verifyCard({
+        number: formData.number.replace(/\s/g, ''),
+        name: formData.name,
+        ccv: formData.ccv,
+        exp_month: parseInt(formData.exp_month, 10),
+        exp_year: parseInt(formData.exp_year, 10),
       });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error?.message || 'Failed to add payment method');
-      }
 
       await loadPaymentMethods();
       setAddingCard(false);

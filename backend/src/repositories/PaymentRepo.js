@@ -39,32 +39,70 @@ class PaymentRepo {
       )
       .orderBy(`pay.created_at`, 'desc');
 
-    //for each payment, get the first event/ticket info (for display purposes)
+    //for each payment, get all unique events (for display purposes)
     const rows = await Promise.all(paymentRows.map(async (payment) => {
-      const firstPurchase = await knex(`${PURCHASES} as p`)
-        .leftJoin('tickets as t', 't.ticket_id', 'p.ticket_id')
-        .leftJoin('events as e', 'e.event_id', 't.event_id')
-        .leftJoin('ticketinfo as ti', 'ti.info_id', 't.info_id')
-        .where('p.payment_id', payment.payment_id)
-        .select(
-          'e.event_id',
-          'e.title as event_title',
-          'ti.info_id as ticket_info_id',
-          'ti.ticket_type'
-        )
-        .first();
+      try {
+        const paymentId = payment.payment_id;
+        if (!paymentId) {
+          return {
+            ...payment,
+            events: null,
+            event: null,
+            ticketInfo: null,
+          };
+        }
 
-      return {
-        ...payment,
-        event: firstPurchase?.event_id ? {
-          eventId: firstPurchase.event_id,
-          title: firstPurchase.event_title,
-        } : null,
-        ticketInfo: firstPurchase?.ticket_info_id ? {
-          infoId: firstPurchase.ticket_info_id,
-          type: firstPurchase.ticket_type,
-        } : null,
-      };
+        const purchases = await knex(`${PURCHASES} as p`)
+          .leftJoin('tickets as t', 't.ticket_id', 'p.ticket_id')
+          .leftJoin('events as e', 'e.event_id', 't.event_id')
+          .leftJoin('ticketinfo as ti', 'ti.info_id', 't.info_id')
+          .where('p.payment_id', paymentId)
+          .select(
+            'e.event_id',
+            'e.title as event_title',
+            'e.venue as event_venue',
+            'ti.info_id as ticket_info_id',
+            'ti.ticket_type'
+          );
+
+        //get unique events
+        const uniqueEvents = [];
+        const seenEventIds = new Set();
+        if (purchases && Array.isArray(purchases)) {
+          for (const purchase of purchases) {
+            if (purchase && purchase.event_id && !seenEventIds.has(purchase.event_id)) {
+              seenEventIds.add(purchase.event_id);
+              uniqueEvents.push({
+                eventId: purchase.event_id,
+                title: purchase.event_title || null,
+                venue: purchase.event_venue || null,
+              });
+            }
+          }
+        }
+
+        //get first ticket info for backward compatibility
+        const firstPurchase = purchases && purchases.length > 0 ? purchases[0] : null;
+
+        return {
+          ...payment,
+          events: uniqueEvents.length > 0 ? uniqueEvents : null,
+          event: uniqueEvents.length > 0 ? uniqueEvents[0] : null, //keep for backward compatibility
+          ticketInfo: firstPurchase?.ticket_info_id ? {
+            infoId: firstPurchase.ticket_info_id,
+            type: firstPurchase.ticket_type || null,
+          } : null,
+        };
+      } catch (error) {
+        console.error('Error processing payment:', payment.payment_id, error);
+        //return payment with null events on error
+        return {
+          ...payment,
+          events: null,
+          event: null,
+          ticketInfo: null,
+        };
+      }
     }));
 
     return rows.map((row) => ({
@@ -76,7 +114,8 @@ class PaymentRepo {
       createdAt: row.created_at,
       refundedCents: Number(row.refunded_cents || 0),
       status: Number(row.refunded_cents || 0) >= row.amount_cents ? 'refunded' : 'approved',
-      event: row.event,
+      events: row.events, //all events for this payment
+      event: row.event, //first event for backward compatibility
       ticketInfo: row.ticketInfo,
       paymentInfo: row.payment_info_id ? {
         paymentInfoId: row.payment_info_id,
