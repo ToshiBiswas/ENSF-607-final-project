@@ -6,6 +6,12 @@ export interface User {
   name: string;
   email: string;
   // add any other fields your backend returns
+  role?: string;          
+
+  preferences?: {
+    location?: string | null;
+    preferredCategory?: string | null;
+  };
 }
 
 interface AuthResponse {
