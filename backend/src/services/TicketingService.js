@@ -174,15 +174,26 @@ static async validateTicket({ currentUser, eventId, code }) {
         throw new AppError('ccv not provided.', 400);
       }
       
-      if (!pinfo || !UserCardRepo.isLinked(user.userId,pinfo.paymentInfoId)) throw new AppError('Payment method not found', 404);
+      if (!pinfo || !(await UserCardRepo.isLinked(user.userId,pinfo.paymentInfoId))) throw new AppError('Payment method not found', 404);
+      if (!pinfo.accountId) {
+        throw new AppError('Payment method missing account ID', 400, { code: 'MISSING_ACCOUNT_ID' });
+      }
     } else if (newCard) {
       pinfo = await paymentService.verifyAndStore(user.userId, newCard);
       ccv = newCard.ccv
+      if (!pinfo.accountId) {
+        throw new AppError('Payment method missing account ID', 400, { code: 'MISSING_ACCOUNT_ID' });
+      }
     } else {
       throw new AppError('No payment method provided', 400);
     }
     
     // Attempt payment
+    if (!pinfo.accountId) {
+      console.error('Payment info missing accountId:', pinfo);
+      throw new AppError('Payment method missing account ID', 400, { code: 'MISSING_ACCOUNT_ID' });
+    }
+    
     const purchaseResult = await MockPaymentProcessor.purchase({
       accountId: pinfo.accountId,
       ccv,

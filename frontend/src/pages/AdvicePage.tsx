@@ -4,7 +4,9 @@ import { AskEventTypeResponse, RecommendedEvent } from '../types/advice';
 import EventForm from '../components/advice/EventForm';
 import EventCard from '../components/advice/EventCard';
 import Alert from '../components/common/Alert';
-import { aiApi, StyleAdviceResponse, userApi, UserTicket } from '../utils/api';
+import { aiApi, StyleAdviceResponse } from '../utils/api';
+import { usersApi } from '../api/users';
+import { useAuth } from '../context/AuthContext';
 
 /**
  * Styling audit (observed):
@@ -22,6 +24,7 @@ import { aiApi, StyleAdviceResponse, userApi, UserTicket } from '../utils/api';
 type FetchState = 'idle' | 'question' | 'recommend';
 
 const AdvicePage: React.FC = () => {
+  const { isAuthenticated } = useAuth();
   const [question, setQuestion] = useState<string>('');
   const [recommended, setRecommended] = useState<RecommendedEvent>(null);
   const [note, setNote] = useState<string | undefined>('');
@@ -30,19 +33,45 @@ const AdvicePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [lastEventType, setLastEventType] = useState<string>('');
   const [lastAction, setLastAction] = useState<FetchState>('idle');
-  // Outfit for owned events
-  const [myTickets, setMyTickets] = useState<UserTicket[]>([]);
+  //outfit for owned events
+  const [myTickets, setMyTickets] = useState<Array<{
+    ticket_id: number;
+    code: string;
+    event?: {
+      eventId?: number;
+      title?: string;
+      location?: string;
+      startTime?: string;
+      endTime?: string;
+    };
+    event_id?: number;
+  }>>([]);
   const [ticketsLoading, setTicketsLoading] = useState<boolean>(true);
   const [ticketsError, setTicketsError] = useState<string | null>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
   const [styleAdvice, setStyleAdvice] = useState<StyleAdviceResponse | null>(null);
   const [styleLoading, setStyleLoading] = useState<boolean>(false);
   const [styleError, setStyleError] = useState<string | null>(null);
+  //chat for follow-up questions
+  const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
+  const [chatInput, setChatInput] = useState<string>('');
+  const [chatLoading, setChatLoading] = useState<boolean>(false);
 
   useEffect(() => {
     fetchQuestion();
-    fetchMyTickets();
   }, []);
+
+  //refetch tickets when user logs in
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchMyTickets();
+    } else {
+      //clear tickets when user logs out
+      setMyTickets([]);
+      setSelectedTicketId(null);
+      setTicketsError(null);
+    }
+  }, [isAuthenticated]);
 
   const fetchQuestion = async () => {
     setLoadingQuestion(true);
@@ -92,10 +121,10 @@ const AdvicePage: React.FC = () => {
     setTicketsLoading(true);
     setTicketsError(null);
     try {
-      const res = await userApi.getMyTickets();
-      // Backend returns { data: [...] } but frontend expects { tickets: [...] }
-      const tickets = res.tickets || res.data || [];
-      // Transform tickets to match expected structure
+      //use usersApi.getTickets() which uses proper apiClient with token refresh
+      const res = await usersApi.getTickets({ page: 1, pageSize: 1000 });
+      const tickets = res.data || [];
+      //transform tickets to match expected structure
       const transformedTickets = tickets.map((ticket: any) => ({
         ticket_id: ticket.id || ticket.ticketId || ticket.ticket_id,
         code: ticket.code,
@@ -110,7 +139,7 @@ const AdvicePage: React.FC = () => {
         event_id: ticket.event_id,
       }));
       //deduplicate by event_id - keep first ticket for each unique event
-      const uniqueEventsMap = new Map<number, UserTicket>();
+      const uniqueEventsMap = new Map<number, typeof transformedTickets[0]>();
       transformedTickets.forEach((ticket: any) => {
         //use event.eventId if available, otherwise fall back to raw event_id
         const eventId = ticket.event?.eventId || ticket.event_id;
@@ -144,15 +173,17 @@ const AdvicePage: React.FC = () => {
     setStyleLoading(true);
     setStyleError(null);
     setStyleAdvice(null);
+    //clear chat when fetching new advice
+    setChatMessages([]);
     try {
       const res = await aiApi.getStyleAdvice({
         eventTitle: ticket.event.title || 'My Event',
         date: ticket.event.startTime,
         location: ticket.event.location,
       });
-      // Backend returns full Gemini JSON structure, transform to match frontend expectations
+      //backend returns full gemini json structure, transform to match frontend expectations
       if (res.ok && res.outfits && Array.isArray(res.outfits) && res.outfits.length > 0) {
-        // Transform Gemini response to frontend format
+        //transform gemini response to frontend format
         const firstOutfit = res.outfits[0];
         setStyleAdvice({
           ok: true,
@@ -165,7 +196,7 @@ const AdvicePage: React.FC = () => {
           ].join('. ') || undefined,
         });
       } else if (res.ok) {
-        // Fallback if structure is different
+        //fallback if structure is different
         setStyleAdvice(res);
       } else {
         throw new Error(res.error || 'Failed to get style advice');
@@ -178,6 +209,49 @@ const AdvicePage: React.FC = () => {
       setStyleError(msg);
     } finally {
       setStyleLoading(false);
+    }
+  };
+
+  const handleChatSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || !selectedTicketId || chatLoading) return;
+
+    const ticket = myTickets.find((t) => t.ticket_id === selectedTicketId);
+    if (!ticket?.event) return;
+
+    const userMessage = chatInput.trim();
+    setChatInput('');
+    
+    //add user message to chat
+    const newUserMessage = { role: 'user' as const, content: userMessage };
+    setChatMessages(prev => [...prev, newUserMessage]);
+    setChatLoading(true);
+
+    try {
+      const res = await aiApi.getStyleAdviceChat({
+        eventTitle: ticket.event.title || 'My Event',
+        date: ticket.event.startTime,
+        location: ticket.event.location,
+        question: userMessage,
+        originalAdvice: styleAdvice,
+        conversationHistory: [...chatMessages, newUserMessage],
+      });
+
+      if (res.ok && res.response) {
+        //add assistant response to chat
+        setChatMessages(prev => [...prev, { role: 'assistant', content: res.response }]);
+      } else {
+        throw new Error(res.response || 'Failed to get response');
+      }
+    } catch (err: any) {
+      console.error('Chat error:', err);
+      //handle 404 specifically - route might not be registered
+      const errorMsg = err?.status === 404 
+        ? 'Chat feature is not available. Please restart the backend server.'
+        : err?.message || 'Unable to get response. Please try again.';
+      setChatMessages(prev => [...prev, { role: 'assistant', content: `Error: ${errorMsg}` }]);
+    } finally {
+      setChatLoading(false);
     }
   };
 
@@ -276,32 +350,89 @@ const AdvicePage: React.FC = () => {
               {styleError && <Alert variant="error" message={styleError} onRetry={fetchStyleForTicket} />}
 
               {!styleLoading && !styleError && styleAdvice && (
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-2 text-sm text-slate-700">
-                  {styleAdvice.outfit && (
-                    <div>
-                      <p className="font-semibold text-slate-800">Outfit:</p>
-                      <p className="leading-relaxed">{styleAdvice.outfit}</p>
+                <>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-2 text-sm text-slate-700">
+                    {styleAdvice.outfit && (
+                      <div>
+                        <p className="font-semibold text-slate-800">Outfit:</p>
+                        <p className="leading-relaxed">{styleAdvice.outfit}</p>
+                      </div>
+                    )}
+                    {styleAdvice.accessories && (
+                      <div>
+                        <p className="font-semibold text-slate-800">Accessories:</p>
+                        <p className="leading-relaxed">{styleAdvice.accessories}</p>
+                      </div>
+                    )}
+                    {styleAdvice.colors && (
+                      <div>
+                        <p className="font-semibold text-slate-800">Colors:</p>
+                        <p className="leading-relaxed">{styleAdvice.colors}</p>
+                      </div>
+                    )}
+                    {styleAdvice.tips && (
+                      <div>
+                        <p className="font-semibold text-slate-800">Tips:</p>
+                        <p className="leading-relaxed">{styleAdvice.tips}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/*chat for follow-up questions*/}
+                  <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+                    <h4 className="text-sm font-semibold text-slate-800 mb-3">Ask more about this advice</h4>
+                    
+                    {/*chat messages*/}
+                    <div className="mb-4 space-y-3 max-h-64 overflow-y-auto">
+                      {chatMessages.map((msg, idx) => (
+                        <div
+                          key={idx}
+                          className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div
+                            className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                              msg.role === 'user'
+                                ? 'bg-[#009245] text-white'
+                                : 'bg-slate-100 text-slate-800'
+                            }`}
+                          >
+                            <p className="leading-relaxed">{msg.content}</p>
+                          </div>
+                        </div>
+                      ))}
+                      {chatLoading && (
+                        <div className="flex justify-start">
+                          <div className="bg-slate-100 rounded-lg px-3 py-2 text-sm text-slate-600">
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-2 bg-slate-400 rounded-full animate-bounce"></div>
+                              <div className="h-2 w-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                              <div className="h-2 w-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {styleAdvice.accessories && (
-                    <div>
-                      <p className="font-semibold text-slate-800">Accessories:</p>
-                      <p className="leading-relaxed">{styleAdvice.accessories}</p>
-                    </div>
-                  )}
-                  {styleAdvice.colors && (
-                    <div>
-                      <p className="font-semibold text-slate-800">Colors:</p>
-                      <p className="leading-relaxed">{styleAdvice.colors}</p>
-                    </div>
-                  )}
-                  {styleAdvice.tips && (
-                    <div>
-                      <p className="font-semibold text-slate-800">Tips:</p>
-                      <p className="leading-relaxed">{styleAdvice.tips}</p>
-                    </div>
-                  )}
-                </div>
+
+                    {/*chat input*/}
+                    <form onSubmit={handleChatSubmit} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        placeholder="Ask a question about the outfit advice..."
+                        disabled={chatLoading}
+                        className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#009245] focus:ring-2 focus:ring-[#44CE85] focus:outline-none disabled:opacity-50"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!chatInput.trim() || chatLoading}
+                        className="rounded-lg bg-[#009245] px-4 py-2 text-white text-sm font-semibold hover:bg-[#056733] transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#009245]"
+                      >
+                        Send
+                      </button>
+                    </form>
+                  </div>
+                </>
               )}
             </div>
           )}

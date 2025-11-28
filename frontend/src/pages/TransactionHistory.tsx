@@ -119,7 +119,9 @@ const TransactionHistory: React.FC = () => {
                                     <div className="flex items-center gap-3 mb-2">
                                         <div>
                                             <h3 className="text-lg font-bold text-slate-800">
-                                                {payment.event?.title || "Payment"}
+                                                {payment.events && payment.events.length > 0
+                                                    ? payment.events.map(e => e.title).join(', ')
+                                                    : payment.event?.title || "Payment"}
                                             </h3>
                                             {payment.ticketInfo && (
                                                 <p className="text-sm text-slate-600">

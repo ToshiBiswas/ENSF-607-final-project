@@ -1,34 +1,6 @@
 import { useEffect, useState } from 'react';
 import './MyTransactionHistoryPage.css';
-
-type Transaction = {
-  paymentId: number;
-  userId: number;
-  eventId: number | null;
-  ticketInfoId: number | null;
-  paymentInfoId: number | null;
-  amountCents: number;
-  currency: string;
-  status: string;
-  refundedCents: number;
-  providerPaymentId: string | null;
-  createdAt: string;
-  updatedAt: string;
-  eventTitle: string | null;
-  eventVenue: string | null;
-  cardLast4: string | null;
-  cardName: string | null;
-};
-
-type TransactionsResponse = {
-  message: string;
-  page: number;
-  pageSize: number;
-  total: number;
-  data: Transaction[];
-};
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api';
+import { paymentsApi, type Transaction } from '../api/payments';
 
 export function MyTransactionHistoryPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -47,34 +19,11 @@ export function MyTransactionHistoryPage() {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('Please log in to view your transaction history');
-      }
-
-      const params = new URLSearchParams({
-        page: page.toString(),
-        pageSize: pageSize.toString(),
+      const data = await paymentsApi.getTransactionHistory({
+        page,
+        pageSize,
+        status: statusFilter || undefined,
       });
-      if (statusFilter) {
-        params.append('status', statusFilter);
-      }
-
-      const res = await fetch(`${API_BASE_URL}/payments/history?${params.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          throw new Error('Please log in to view your transaction history');
-        }
-        throw new Error(`Failed to load transactions (status ${res.status})`);
-      }
-
-      const data: TransactionsResponse = await res.json();
       setTransactions(data.data ?? []);
       setTotal(data.total ?? 0);
     } catch (err) {

@@ -79,5 +79,37 @@ export const eventsApi = {
     const response = await apiClient.get<TicketTypesResponse>(`/events/${eventId}/tickets`);
     return response.ticketTypes;
   },
+
+  /**
+   * Get events created by the current user (organizer)
+   */
+  getMyEvents: async (): Promise<Event[]> => {
+    const response = await apiClient.get<EventsResponse>('/user/events');
+    return response.events;
+  },
+
+  /**
+   * Validate a ticket code for an event (organizer only)
+   */
+  validateTicket: async (eventId: number, code: string): Promise<{
+    response: 'valid' | 'invalid';
+    ticket: {
+      id: number;
+      code: string;
+      event_id: number;
+      event_title: string;
+      event_location: string;
+      event_start: string;
+      event_end: string;
+      ticket_type: string;
+      ticket_price: number;
+    } | null;
+  }> => {
+    const response = await apiClient.get<{
+      response: 'valid' | 'invalid';
+      ticket: any;
+    }>(`/events/${eventId}/tickets/validate?code=${code}`);
+    return response;
+  },
 };
 

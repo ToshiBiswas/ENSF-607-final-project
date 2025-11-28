@@ -1,20 +1,11 @@
 import { useEffect, useState } from 'react';
 import './MyInfoPage.css';
-
-type User = {
-  userId: number;
-  name: string;
-  email: string;
-  role: string;
-  createdAt?: string;
-};
+import { usersApi, type User } from '../api/users';
 
 type UserPreferences = {
   location?: string;
   categoryId?: number;
 };
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api';
 
 export function MyInfoPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -33,28 +24,9 @@ export function MyInfoPage() {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('Please log in to view your information');
-      }
-
-      const res = await fetch(`${API_BASE_URL}/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          throw new Error('Please log in to view your information');
-        }
-        throw new Error(`Failed to load user info (status ${res.status})`);
-      }
-
-      const data = await res.json();
-      setUser(data.user);
-      setFormData({ name: data.user.name, email: data.user.email });
+      const userData = await usersApi.getMe();
+      setUser(userData);
+      setFormData({ name: userData.name, email: userData.email });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load user information');
     } finally {
@@ -66,23 +38,8 @@ export function MyInfoPage() {
     setSaving(true);
     setError(null);
     try {
-      const token = localStorage.getItem('authToken');
-      const res = await fetch(`${API_BASE_URL}/me`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error?.message || 'Failed to update profile');
-      }
-
-      const data = await res.json();
-      setUser(data.user);
+      const updatedUser = await usersApi.updateProfile(formData);
+      setUser(updatedUser);
       setEditing(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update profile');

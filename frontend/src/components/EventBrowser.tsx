@@ -1,32 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { eventsApi, type Event } from '../api/events';
 
-type Category = {
-  categoryId: number;
-  value: string;
-};
-
-type Organizer = {
-  userId: number;
-  name: string;
-  email: string;
-};
-
-type EventSummary = {
-  eventId: number;
-  title: string;
-  description: string;
-  location: string;
-  startTime: string;
-  endTime: string;
-  categories?: Category[];
-  organizer?: Organizer;
-};
-
-type EventsResponse = {
-  events?: EventSummary[];
-};
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api';
+type EventSummary = Event;
 
 /** Displays a filterable list of events pulled from the backend. */
 export function EventBrowser() {
@@ -45,24 +20,13 @@ export function EventBrowser() {
       return;
     }
 
-    const controller = new AbortController();
     async function loadEvents() {
       setLoading(true);
       setError(null);
       try {
-        const params = new URLSearchParams({ category: activeCategory.trim() });
-        const res = await fetch(`${API_BASE_URL}/events?${params.toString()}`, {
-          signal: controller.signal,
-        });
-        if (!res.ok) {
-          throw new Error(`Unable to load events (status ${res.status})`);
-        }
-        const data: EventsResponse = await res.json();
-        setEvents(data.events ?? []);
+        const events = await eventsApi.getByCategory(activeCategory.trim());
+        setEvents(events);
       } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') {
-          return;
-        }
         setError(err instanceof Error ? err.message : 'Unexpected error while loading events');
       } finally {
         setLoading(false);
@@ -70,7 +34,6 @@ export function EventBrowser() {
     }
 
     loadEvents();
-    return () => controller.abort();
   }, [activeCategory]);
 
   const filteredEvents = useMemo(() => {

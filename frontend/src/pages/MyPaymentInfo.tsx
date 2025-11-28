@@ -75,6 +75,13 @@ const MyPaymentInfo: React.FC = () => {
         }
 
         const cleanedNumber = formData.number.replace(/\s/g, '');
+
+        if (!/^[A-Za-z\s]+$/.test(formData.name.trim())) {
+            setError('Cardholder name can only contain letters.');
+            setSubmitting(false);
+            return;
+        }
+
         if (!/^\d{13,19}$/.test(cleanedNumber)) {
             setError('Card number must be 13–19 digits.');
             setSubmitting(false);
@@ -88,8 +95,20 @@ const MyPaymentInfo: React.FC = () => {
             setSubmitting(false);
             return;
         }
+        if (!/^\d{4}$/.test(formData.exp_year)) {
+            setError('Expiry year must be a 4-digit number.');
+            setSubmitting(false);
+            return;
+        }
+
         if (Number.isNaN(expYearNum)) {
             setError('Expiry year is invalid.');
+            setSubmitting(false);
+            return;
+        }
+
+        if (expYearNum < 2025) {
+            setError('Expiry year must be 2025 or later.');
             setSubmitting(false);
             return;
         }
@@ -230,7 +249,10 @@ const MyPaymentInfo: React.FC = () => {
                                 id="card-name"
                                 type="text"
                                 value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                onChange={(e) => {
+                                    const lettersOnly = e.target.value.replace(/[^A-Za-z\s]/g, '');
+                                    setFormData({ ...formData, name: lettersOnly });
+                                }}
                                 placeholder="John Doe"
                                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009245] focus:border-[#009245]"
                                 required
@@ -243,12 +265,19 @@ const MyPaymentInfo: React.FC = () => {
                                 </label>
                                 <input
                                     id="exp-month"
-                                    type="number"
+                                    type="text"
+                                    inputMode="numeric"
                                     value={formData.exp_month}
-                                    onChange={(e) => setFormData({ ...formData, exp_month: e.target.value })}
+                                    onChange={(e) => {
+                                        const digits = e.target.value.replace(/\D/g, '').slice(0, 2);
+                                        if (digits === '') {
+                                            setFormData({ ...formData, exp_month: '' });
+                                            return;
+                                        }
+                                        const parsed = Math.min(Math.max(parseInt(digits, 10), 1), 12);
+                                        setFormData({ ...formData, exp_month: parsed.toString() });
+                                    }}
                                     placeholder="12"
-                                    min="1"
-                                    max="12"
                                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009245] focus:border-[#009245]"
                                     required
                                 />
@@ -259,11 +288,14 @@ const MyPaymentInfo: React.FC = () => {
                                 </label>
                                 <input
                                     id="exp-year"
-                                    type="number"
+                                    type="text"
+                                    inputMode="numeric"
                                     value={formData.exp_year}
-                                    onChange={(e) => setFormData({ ...formData, exp_year: e.target.value })}
+                                    onChange={(e) => {
+                                        const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                        setFormData({ ...formData, exp_year: digits });
+                                    }}
                                     placeholder="2025"
-                                    min={new Date().getFullYear()}
                                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009245] focus:border-[#009245]"
                                     required
                                 />
