@@ -454,7 +454,7 @@ class EventService {
           payoutRecord = await PaymentRepo.insertPayment({
             userId: organizerId,
             paymentInfoId,
-            amountCents: payoutCents,
+            amountCents: -payoutCents,
           });
 
           // Optional: notify organizer that they got paid
@@ -462,7 +462,7 @@ class EventService {
             userId: organizerId,
             eventId: eventId,
             title: 'event_payout',
-            message: `Your event "${title}" was settled. You earned $${(payoutCents / 100).toFixed(2)} from ticket sales.`,
+            message: `Your event "${title}" was settled. You earned $${(-payoutCents / 100).toFixed(2)} from ticket sales.`,
             sendAt: new Date()
           });
         } catch (e) {
