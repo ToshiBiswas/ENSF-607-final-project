@@ -16,14 +16,12 @@ export async function apiRequest<T>(
   const token = localStorage.getItem('token');
   
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options.headers,
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
+  
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
+ 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers,
@@ -181,7 +179,7 @@ export interface StyleAdviceResponse {
   accessories?: string;
   colors?: string;
   tips?: string;
-  // Backend may return full Gemini structure
+  //backend may return full gemini structure
   summary?: string;
   outfits?: Array<{
     label?: string;
@@ -248,9 +246,22 @@ export const aiApi = {
       method: 'POST',
       body: JSON.stringify(request),
     }),
+
+  getStyleAdviceChat: (request: {
+    eventTitle: string;
+    date?: string;
+    location?: string;
+    question: string;
+    originalAdvice?: any;
+    conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
+  }): Promise<{ ok: boolean; response: string }> =>
+    apiRequest<{ ok: boolean; response: string }>('/advice/style/chat', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    }),
 };
 
-// User tickets (for outfit advice)
+//user tickets (for outfit advice)
 export interface UserTicket {
   ticket_id: number;
   code: string;
@@ -264,7 +275,7 @@ export interface UserTicket {
 }
 export interface UserTicketsResponse {
   tickets?: UserTicket[];
-  data?: UserTicket[]; // Backend may return 'data' instead of 'tickets'
+  data?: UserTicket[]; //backend may return 'data' instead of 'tickets'
 }
 
 export const userApi = {

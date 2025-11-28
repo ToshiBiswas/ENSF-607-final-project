@@ -10,10 +10,11 @@ const BASE_PATH = '/api';
 async function adviceRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('token');
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options.headers,
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  
+
 
   const res = await fetch(`${BASE_PATH}${path}`, {
     ...options,

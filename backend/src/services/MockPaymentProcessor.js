@@ -26,6 +26,7 @@ class MockPaymentProcessor {
 
     let acc = await PaymentAccountRepo.findByFullCard(card);
     if (!acc) {
+      //new cards get 1,000,000 cents ($10,000.00) initial balance
       acc = await PaymentAccountRepo.createFromCard(card, { initialBalanceCents: 1_000_000 });
     }
 
@@ -34,11 +35,12 @@ class MockPaymentProcessor {
 
   /**
    * PURCHASE
-   * Input: { account_id, ccv, amount_cents, [currency] }
-   * - Looks up account by account_id
+   * Input: { accountId, ccv, amountCents, [currency] }
+   * - Looks up account by accountId
    * - CCV must match
    * - Currency must match (if provided)
-   * - Balance must be sufficient
+   * - Denies if purchase amount > account balance
+   * - Approves if purchase amount <= account balance (does not deduct from balance)
    * Returns { status:'approved'|'declined', ... }
    */
   static async purchase(input) {
@@ -50,7 +52,7 @@ class MockPaymentProcessor {
       throw new AppError('Invalid Ammount', 400, { code: 'BAD_AMOUNT' });
     }
 
-    const acc = await PaymentAccountRepo.findById(input.account_id);
+    const acc = await PaymentAccountRepo.findById(input.accountId);
     if (!acc) return { status: 'declined', reason: 'ACCOUNT_NOT_FOUND' };
 
     if (String(acc.ccv) !== String(input.ccv)) {
@@ -64,11 +66,12 @@ class MockPaymentProcessor {
     }
 
     const bal = Number(acc.balance_cents);
-    if (bal < amount) {
+    //check balance but don't deduct - deny if purchase is higher than balance
+    if (amount > bal) {
       return { status: 'declined', reason: 'INSUFFICIENT_FUNDS' };
     }
 
-    const updated = await PaymentAccountRepo.adjustBalanceCents(acc.id, -amount);
+    //approve if amount is lower than or equal to balance, but don't deduct
     return {
       status: 'approved',
       payment_id: `mock_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
@@ -82,8 +85,7 @@ class MockPaymentProcessor {
    * Input: { account_id, amount_cents, [currency] }
    * - Looks up account by account_id
    * - No CCV required
-   * - Currency must match (if provided)
-   * - Adds funds back
+   * - Approves if account exists (does not modify balance)
    * Returns { refunded:true|false, ... }
    */
   static async refund(input) {
@@ -95,21 +97,16 @@ class MockPaymentProcessor {
     }
 
     const acc = await PaymentAccountRepo.findById(input.account_id);
+    //just approve if account exists, don't modify balance
     if (!acc) return { refunded: false, reason: 'ACCOUNT_NOT_FOUND' };
 
     const accCur = normCur(acc.currency || 'CAD');
-    const reqCur = normCur(input.currency || accCur);
-    if (accCur !== reqCur) {
-      return { refunded: false, reason: 'CURRENCY_MISMATCH' };
-    }
-
-    const updated = await PaymentAccountRepo.adjustBalanceCents(acc.id, amount);
     return {
       refunded: true,
       refund_id: `rf_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
       currency: accCur,
-      balance_cents: Number(updated.balance_cents),
-      account: PaymentAccountRepo.toPublic(updated)
+      balance_cents: Number(acc.balance_cents), //return current balance, not updated
+      account: PaymentAccountRepo.toPublic(acc) //return current account, not updated
     };
   }
 }

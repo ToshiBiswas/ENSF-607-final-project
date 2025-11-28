@@ -305,7 +305,11 @@ class EventService {
     }
 
     // Hydrate into Event domain objects (with organizer, categories, tickets)
-    const events = await Promise.all(rows.map((r) => EventRepo.toDomain(r)));
+    const allEvents = await Promise.all(rows.map((r) => EventRepo.toDomain(r)));
+
+    // Filter to only show purchasable events (events that haven't started yet)
+    const now = new Date();
+    const events = allEvents.filter(evt => evt.purchasable(now));
 
     return { page, pageSize, total, events };
   }

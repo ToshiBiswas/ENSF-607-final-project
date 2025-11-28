@@ -26,6 +26,7 @@ class AuthController {
    * Body: { name, email, password }
    */
   static register = asyncHandler(async (req, res) => {
+    const { name, email, password } = req.body;
     const nameInput = typeof name === 'string' ? name.trim() : '';
     const emailInput = typeof email === 'string' ? email.trim() : '';
     const passwordInput = typeof password === 'string' ? password : '';

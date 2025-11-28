@@ -218,4 +218,62 @@ Return ONLY JSON with this shape:
   throw e;
 }
 
-module.exports = { getEventAdvice, getOutfitAdvice };
+//chat/follow-up questions about outfit advice
+async function getOutfitAdviceChat({ eventTitle, date, location, originalAdvice, question, conversationHistory = [] }) {
+  //build context from original advice and conversation history
+  const contextParts = [];
+  
+  if (originalAdvice) {
+    contextParts.push(`Original outfit advice:\n${JSON.stringify(originalAdvice, null, 2)}`);
+  }
+  
+  if (conversationHistory.length > 0) {
+    contextParts.push(`\nPrevious conversation:\n${conversationHistory.map(msg => `${msg.role}: ${msg.content}`).join('\n')}`);
+  }
+  
+  const context = contextParts.length > 0 ? contextParts.join('\n\n') : '';
+  
+  const userPrompt = `
+Event context:
+- Title: ${eventTitle ?? "N/A"}
+- Date: ${date ?? "N/A"}
+- Location: ${location ?? "N/A"}
+
+${context ? `${context}\n\n` : ''}User question: ${question}
+
+Instructions:
+- Answer the user's question about the outfit advice in a helpful, conversational way
+- Reference the original advice when relevant
+- Keep responses concise (2-4 sentences)
+- Be friendly and practical
+`.trim();
+
+  let lastErr;
+  for (const modelId of CANDIDATES) {
+    try {
+      console.log(`[Gemini] (chat) Trying model: ${modelId}`);
+      const text = await withRetry(() => callOnce(modelId, userPrompt), {
+        tries: 6,
+        baseMs: 700,
+      });
+      return { text };
+    } catch (err) {
+      lastErr = err;
+      const status = err?.status || err?.statusCode;
+      console.warn(
+        `[Gemini] (chat) Model ${modelId} failed with ${status || err.message}. Trying next...`
+      );
+    }
+  }
+
+  const status = lastErr?.status || lastErr?.statusCode || 500;
+  const message =
+    status === 503
+      ? "Temporarily unavailable: the language model is busy. Please retry in a moment."
+      : lastErr?.message || "Unknown Gemini error";
+  const e = new Error(message);
+  e.status = status;
+  throw e;
+}
+
+module.exports = { getEventAdvice, getOutfitAdvice, getOutfitAdviceChat };
