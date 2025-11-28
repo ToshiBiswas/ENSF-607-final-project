@@ -19,6 +19,8 @@ import MyInfo from "@pages/MyInfo";
 import MyPaymentInfo from "@pages/MyPaymentInfo";
 import TransactionHistory from "@pages/TransactionHistory";
 import { MyTicketPage } from "@pages/MyTicketPage";
+import { MyEventsPage } from "@pages/MyEventsPage";
+import { ValidateTicketPage } from "@pages/ValidateTicketPage";
 function App() {
   return (
     <AuthProvider>
@@ -49,7 +51,11 @@ function App() {
             <Route path="MyInfo" element={<MyInfo />} />
             <Route path="MyPaymentInfo" element={<MyPaymentInfo />} />
             <Route path="TransactionHistory" element={<TransactionHistory />} />
+            <Route path="MyEvents" element={<MyEventsPage />} />
           </Route>
+
+          {/* Validate Ticket route */}
+          <Route path="/events/:eventId/validate" element={<ValidateTicketPage />} />
 
           {/* Cart, Checkout, AI Advice, and Payment Info routes */}
           <Route path="/cart" element={<Cart />} />

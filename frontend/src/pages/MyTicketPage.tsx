@@ -4,6 +4,7 @@ import { usersApi } from '../api/users';
 
 type Ticket = {
   id: number;
+  code: string;
   event_id: number;
   user_id: number;
   quantity: number;
@@ -21,16 +22,6 @@ type Ticket = {
   account_id?: string;
 };
 
-type TicketsResponse = {
-  message: string;
-  page: number;
-  pageSize: number;
-  total: number;
-  data: Ticket[];
-};
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api';
-
 export function MyTicketPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -41,20 +32,19 @@ export function MyTicketPage() {
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
   const [eventFilter, setEventFilter] = useState<string>('');
-  const [upcomingOnly, setUpcomingOnly] = useState(false);
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [refundingTicketId, setRefundingTicketId] = useState<number | null>(null);
   const [uniqueEvents, setUniqueEvents] = useState<Array<{ event_id: number; event_title: string }>>([]);
 
-  // Check for purchase success parameter
+  //check for purchase success parameter
   useEffect(() => {
     const purchaseParam = searchParams.get('purchase');
     if (purchaseParam === 'success') {
       setShowSuccessBanner(true);
-      // Remove the parameter from URL
+      //remove the parameter from url
       searchParams.delete('purchase');
       setSearchParams(searchParams, { replace: true });
-      // Auto-hide banner after 5 seconds
+      //auto-hide banner after 5 seconds
       const timer = setTimeout(() => {
         setShowSuccessBanner(false);
       }, 5000);
@@ -66,29 +56,17 @@ export function MyTicketPage() {
   useEffect(() => {
     async function loadUniqueEvents() {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
-        const res = await fetch(`${API_BASE_URL}/me/tickets?page=1&pageSize=1000`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
+        const data = await usersApi.getTickets({ page: 1, pageSize: 1000 });
+        const eventsMap = new Map<number, { event_id: number; event_title: string }>();
+        (data.data ?? []).forEach((ticket: any) => {
+          if (ticket.event_id && ticket.event_title && !eventsMap.has(ticket.event_id)) {
+            eventsMap.set(ticket.event_id, {
+              event_id: ticket.event_id,
+              event_title: ticket.event_title,
+            });
+          }
         });
-
-        if (res.ok) {
-          const data: TicketsResponse = await res.json();
-          const eventsMap = new Map<number, { event_id: number; event_title: string }>();
-          (data.data ?? []).forEach((ticket) => {
-            if (ticket.event_id && ticket.event_title && !eventsMap.has(ticket.event_id)) {
-              eventsMap.set(ticket.event_id, {
-                event_id: ticket.event_id,
-                event_title: ticket.event_title,
-              });
-            }
-          });
-          setUniqueEvents(Array.from(eventsMap.values()).sort((a, b) => a.event_title.localeCompare(b.event_title)));
-        }
+        setUniqueEvents(Array.from(eventsMap.values()).sort((a, b) => a.event_title.localeCompare(b.event_title)));
       } catch (err) {
         console.error('Failed to load unique events:', err);
       }
@@ -103,45 +81,19 @@ export function MyTicketPage() {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        pageSize: pageSize.toString(),
+      const data = await usersApi.getTickets({
+        page,
+        pageSize,
+        eventId: eventFilter ? parseInt(eventFilter, 10) : undefined,
       });
-      if (eventFilter) {
-        params.append('eventId', eventFilter);
-      }
-      if (upcomingOnly) {
-        params.append('upcoming', 'true');
-      }
-
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Please log in to view your tickets');
-      }
-
-      const res = await fetch(`${API_BASE_URL}/me/tickets?${params.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          throw new Error('Please log in to view your tickets');
-        }
-        throw new Error(`Failed to load tickets (status ${res.status})`);
-      }
-
-      const data: TicketsResponse = await res.json();
-      setTickets(data.data ?? []);
+      setTickets((data.data ?? []) as Ticket[]);
       setTotal(data.total ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load tickets');
     } finally {
       setLoading(false);
     }
-  }, [page, eventFilter, upcomingOnly]);
+  }, [page, eventFilter]);
 
   useEffect(() => {
     loadTickets();
@@ -261,22 +213,6 @@ export function MyTicketPage() {
               ))}
             </select>
           </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              id="upcoming-filter"
-              type="checkbox"
-              checked={upcomingOnly}
-              onChange={(e) => {
-                setUpcomingOnly(e.target.checked);
-                setPage(1);
-              }}
-              className="w-5 h-5 text-[#009245] border-slate-300 rounded focus:ring-[#009245]"
-            />
-            <label htmlFor="upcoming-filter" className="text-sm font-medium text-slate-700 cursor-pointer">
-              Upcoming events only
-            </label>
-          </div>
         </div>
 
         {/* Tickets List */}
@@ -284,9 +220,7 @@ export function MyTicketPage() {
           <div className="bg-white rounded-lg shadow-md p-12 text-center">
             <p className="text-slate-700 text-lg mb-2">No tickets found.</p>
             <p className="text-slate-500 text-sm">
-              {eventFilter || upcomingOnly
-                ? 'Try adjusting your filters'
-                : 'Purchase tickets from events to see them here'}
+              {eventFilter ? 'Try adjusting your filters' : 'Purchase tickets from events to see them here'}
             </p>
           </div>
         ) : (
@@ -342,7 +276,12 @@ export function MyTicketPage() {
                   </div>
 
                   <div className="flex justify-between items-center pt-4 border-t border-slate-200">
-                    <span className="text-sm text-slate-500 font-mono">Ticket ID: #{ticket.id}</span>
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm text-slate-500 font-mono">Ticket ID: #{ticket.id}</span>
+                      {ticket.code && (
+                        <span className="text-sm text-slate-500 font-mono">Code: {ticket.code}</span>
+                      )}
+                    </div>
                     <div className="flex gap-3">
                       {ticket.event_id && (
                         <button
