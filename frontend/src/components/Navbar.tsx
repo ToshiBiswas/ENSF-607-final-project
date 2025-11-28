@@ -2,10 +2,12 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Logo from "./Logo";
 import { useAuth } from "../context/AuthContext";
+import { useNotifications } from "../hooks/useNotifications";
 
 const Navbar: React.FC = () => {
     const { isAuthenticated, logout, user } = useAuth();
     const navigate = useNavigate();
+    const { unreadCount } = useNotifications(true, 30000); // Auto-refresh every 30 seconds
 
     const handleLogout = () => {
         logout();
@@ -35,6 +37,30 @@ const Navbar: React.FC = () => {
                                 {user.name}
                             </span>
                         )}
+                <Link to="/notifications" style={{ ...linkStyle, position: "relative" }}>
+                    Notifications
+                    {unreadCount > 0 && (
+                        <span
+                            style={{
+                                position: "absolute",
+                                top: "-8px",
+                                right: "-12px",
+                                backgroundColor: "#ff4444",
+                                color: "white",
+                                borderRadius: "50%",
+                                width: "20px",
+                                height: "20px",
+                                fontSize: "0.75rem",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontWeight: "bold",
+                            }}
+                        >
+                            {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                    )}
+                </Link>
                 <Link to="/MyAccount" style={linkStyle}>
                     My Account
                 </Link>

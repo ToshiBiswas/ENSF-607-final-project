@@ -179,16 +179,52 @@ static async validateTicket({ currentUser, eventId, code }) {
     } else {
       throw new AppError('No payment method provided', 400);
     }
-    MockPaymentProcessor.purchase({
-      accountId :pinfo.accountId,
+    
+    // Attempt payment
+    const purchaseResult = await MockPaymentProcessor.purchase({
+      accountId: pinfo.accountId,
       ccv,
       amountCents: cart.totalCents()
     });
+
+    // Handle payment failure
+    if (purchaseResult.status !== 'approved') {
+      const reason = purchaseResult.reason || 'unknown';
+      const reasonMessages = {
+        'ACCOUNT_NOT_FOUND': 'Your payment method was not found',
+        'BAD_CCV': 'Invalid security code',
+        'CURRENCY_MISMATCH': 'Currency mismatch',
+        'INSUFFICIENT_FUNDS': 'Insufficient funds',
+      };
+      
+      // Notify user of payment failure - get event info from cart items
+      for (const item of cart.items) {
+        const tinfo = await TicketInfoRepo.findById(item.info_id);
+        if (tinfo) {
+          const row = await knex('ticketinfo').where({ info_id: item.info_id }).first();
+          if (row && row.event_id) {
+            const evt = await EventRepo.findById(row.event_id);
+            await NotificationService.queue({
+              userId: user.userId,
+              eventId: evt?.eventId || null,
+              title: 'payment_failed',
+              message: `Payment failed for your cart: ${reasonMessages[reason] || reason}. Please try again with a different payment method.`,
+              sendAt: new Date()
+            });
+          }
+        }
+      }
+      
+      throw new AppError(`Payment declined: ${reasonMessages[reason] || reason}`, 400, {
+        code: 'PAYMENT_DECLINED',
+        reason
+      });
+    }
+
     const payment = await require('./PaymentService').PaymentService.chargeAndRecord({
       userId: user.userId,
       paymentInfo: pinfo,
       amountCents: cart.totalCents()
-,
     });
     const minted = [];
     // Single encompassing transaction: ensures stock decrement + payment record stay consistent
@@ -226,13 +262,14 @@ static async validateTicket({ currentUser, eventId, code }) {
 
         minted.push(...mintedBatch);
 
-        // 5. Queue notifications – safe to use non-trx here since it’s just an insert
+        // 5. Queue notifications – safe to use non-trx here since it's just an insert
+        const evt = await EventRepo.findById(locked.row.event_id);
         await NotificationService.queue({
           userId: user.userId,
-          title: 'payment_approved',
-          message: `Payment approved and ${item.quantity} ticket(s) minted`,
           eventId: locked.row.event_id,
-          paymentId: payment.paymentId,
+          title: 'payment_approved',
+          message: `Payment approved! ${item.quantity} ticket(s) for "${evt?.title || 'event'}" have been added to your account.`,
+          sendAt: new Date()
         });
       }
     }); 
