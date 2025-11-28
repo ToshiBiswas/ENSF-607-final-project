@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { eventsApi, Event } from "../api/events";
 
 const Homepage: React.FC = () => {
+  const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -225,8 +227,7 @@ const Homepage: React.FC = () => {
                     <button
                       className="w-full py-2 bg-[#009245] text-white rounded-lg hover:bg-[#056733] transition-colors"
                       onClick={() => {
-                        // hook up navigation when you add an event details page
-                        console.log("View event:", event.eventId);
+                        navigate(`/events/${event.eventId}`);
                       }}
                     >
                       View Details

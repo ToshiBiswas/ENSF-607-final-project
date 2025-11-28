@@ -80,21 +80,22 @@ if (require.main === module) {
 }
 
 function startExpiredEventCleanupScheduler() {
-  const INTERVAL_MS = process.env.INTERVAL_MS
+  const INTERVAL_MS = parseInt(process.env.INTERVAL_MS || '60000', 10); // Default 60 seconds
   console.log('started Expired Events')
   setInterval(async () => {
     try {
       // Call your real cleanup method here:
       // adjust the method name to whatever you actually implemented.
-      const deleted = await EventService.settleAndDeleteExpiredEvents();
+      const result = await EventService.settleAndDeleteExpiredEvents();
 
-      if (deleted > 0) {
-        console.log(`[scheduler] Deleted ${deleted} expired event(s).`);
+      if (result.count > 0) {
+        console.log(`[scheduler] Deleted ${result.count} expired event(s).`);
       } else {
         console.log('[scheduler] No deleted expired events.');
       }
     } catch (err) {
-      console.error('[scheduler] Error deleting expired events:', err);
+      console.error('[scheduler] Error deleting expired events:', err.message || err);
+      // Don't crash - just log and continue
     }
   }, INTERVAL_MS);
 }

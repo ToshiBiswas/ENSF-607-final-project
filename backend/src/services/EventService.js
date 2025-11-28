@@ -277,7 +277,7 @@ class EventService {
     const page = Math.max(parseInt(query?.page || '1', 10), 1);
     const pageSize = Math.min(
       Math.max(parseInt(query?.pageSize || '10', 10), 1),
-      100
+      10000
     );
 
     const value = String(categoryValue ?? '').trim();
@@ -396,11 +396,20 @@ class EventService {
    */
   static async settleAndDeleteExpiredEvents() {
     // 1) Find expired events
-
-
-    const expired = EventRepo.getExpiredEvents()
+    let expired = [];
+    try {
+      expired = await EventRepo.getExpiredEvents();
+    } catch (err) {
+      // If table doesn't exist yet (migrations not run), just return empty
+      if (err.code === 'ER_NO_SUCH_TABLE') {
+        return { count: 0, payouts: [] };
+      }
+      // Re-throw other errors
+      throw err;
+    }
+    
     const results = [];
-    if (!expired.length) {
+    if (!expired || !expired.length) {
       return { count: 0, payouts: [] };
     }
     for (const evt of expired) {

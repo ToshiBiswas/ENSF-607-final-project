@@ -51,8 +51,15 @@ export const eventsApi = {
   /**
    * Get events by category
    */
-  getByCategory: async (category?: string): Promise<Event[]> => {
-    const query = category ? `?category=${encodeURIComponent(category)}` : '';
+  getByCategory: async (category?: string, pageSize?: number): Promise<Event[]> => {
+    const params = new URLSearchParams();
+    if (category) {
+      params.append('category', category);
+    }
+    if (pageSize) {
+      params.append('pageSize', pageSize.toString());
+    }
+    const query = params.toString() ? `?${params.toString()}` : '';
     const response = await apiClient.get<EventsResponse>(`/events${query}`);
     return response.events;
   },

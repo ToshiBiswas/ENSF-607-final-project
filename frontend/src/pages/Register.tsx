@@ -18,6 +18,19 @@ const Register: React.FC = () => {
     e.preventDefault();
     setError(null);
 
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedName) {
+      setError("Name is required");
+      return;
+    }
+
+    if (/\d/.test(trimmedName)) {
+      setError("Name cannot contain numbers");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -31,7 +44,7 @@ const Register: React.FC = () => {
     setLoading(true);
 
     try {
-      await register(name, email, password);
+      await register(trimmedName, trimmedEmail, password);
       navigate("/");
     } catch (err) {
       setError(
@@ -86,7 +99,10 @@ const Register: React.FC = () => {
                 id="name"
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  const lettersOnly = e.target.value.replace(/\d+/g, "");
+                  setName(lettersOnly);
+                }}
                 required
                 placeholder="John Doe"
                 className="auth-input"

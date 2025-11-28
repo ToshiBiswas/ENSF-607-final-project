@@ -196,7 +196,7 @@ class PaymentService {
    *  - issue provider refund
    *  - add a refunds row
    */
-  static async refund(purchaseRow) {
+  static async refund(purchaseRow, trx = null) {
     if (!purchaseRow) {
       throw new AppError('purchase is required', 400, {
         code: 'PURCHASE_REQUIRED',
@@ -218,12 +218,12 @@ class PaymentService {
 
     // Talk to the mock provider
     await MockPaymentProcessor.refund({
-      accountId,
-      amountCents,
+      account_id: accountId,
+      amount_cents: amountCents,
     });
 
-    // Record the refund locally
-    await PaymentRepo.refund(userId, paymentId, amountCents);
+    // Record the refund locally (pass transaction if provided)
+    await PaymentRepo.refund(userId, paymentId, amountCents, trx);
 
     return true;
   }

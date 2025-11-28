@@ -49,7 +49,13 @@ export default function PaymentInfo() {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const { name } = e.target;
+    let { value } = e.target;
+
+    if (name === 'ccv') {
+      value = value.replace(/\D/g, '').slice(0, 4);
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -59,14 +65,18 @@ export default function PaymentInfo() {
   };
 
   const formatCardNumber = (value: string) => {
-    //Remove all non-digits
     const digits = value.replace(/\D/g, '');
-    //Add spaces every 4 digits
     return digits.match(/.{1,4}/g)?.join(' ') || digits;
   };
 
+  const formatCardNumberInput = (value: string) => {
+    const cleaned = value.replace(/\D/g, '');
+    const chunks = cleaned.match(/.{1,4}/g) || [];
+    return chunks.join(' ').slice(0, 19);
+  };
+
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCardNumber(e.target.value);
+    const formatted = formatCardNumberInput(e.target.value);
     setFormData((prev) => ({
       ...prev,
       number: formatted,
@@ -89,13 +99,46 @@ export default function PaymentInfo() {
     //Clean card number (remove spaces)
     const cleanNumber = formData.number.replace(/\s/g, '');
 
+    if (!/^\d{13,19}$/.test(cleanNumber)) {
+      setFormError('Card number must be 13–19 digits.');
+      setSubmitting(false);
+      return;
+    }
+
+    const expMonthNum = parseInt(formData.exp_month, 10);
+    const expYearNum = parseInt(formData.exp_year, 10);
+    if (Number.isNaN(expMonthNum) || expMonthNum < 1 || expMonthNum > 12) {
+      setFormError('Expiry month must be between 1 and 12.');
+      setSubmitting(false);
+      return;
+    }
+    if (Number.isNaN(expYearNum)) {
+      setFormError('Expiry year is invalid.');
+      setSubmitting(false);
+      return;
+    }
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    if (expYearNum < currentYear || (expYearNum === currentYear && expMonthNum < currentMonth)) {
+      setFormError('Card is expired. Please use a valid expiry date.');
+      setSubmitting(false);
+      return;
+    }
+
+    if (!/^\d{3,4}$/.test(formData.ccv)) {
+      setFormError('CCV must be 3 or 4 digits.');
+      setSubmitting(false);
+      return;
+    }
+
     try {
       await paymentApi.verifyCard({
         number: cleanNumber,
         name: formData.name.trim(),
         ccv: formData.ccv,
-        exp_month: parseInt(formData.exp_month, 10),
-        exp_year: parseInt(formData.exp_year, 10),
+        exp_month: expMonthNum,
+        exp_year: expYearNum,
       });
 
       //Success - reload payment methods and reset form

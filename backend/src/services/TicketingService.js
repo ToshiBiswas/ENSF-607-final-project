@@ -46,10 +46,12 @@ async function mintTicketsWithRetry(trx, { userId, eventId, infoId, purchaseId, 
     } while (await TicketMintRepo.isCodeTaken(code, trx));
 
     // tickets + purchases both go through the same trx
+    // First create the ticket (purchaseId is the payment ID passed to this function)
     const ticket = await TicketMintRepo.save(
-      { code, ownerId: userId, eventId, infoId, purchaseId: purchase.purchse_id },
+      { code, ownerId: userId, eventId, infoId, purchaseId: purchaseId },
       trx
     );
+    // Then create the purchase record linking payment to ticket
     const purchase = await PaymentRepo.insertPurchase(
       purchaseId,
       ticket.ticketId,
@@ -275,7 +277,8 @@ static async validateTicket({ currentUser, eventId, code }) {
     }); 
     // Clear cart OUTSIDE the transaction
     await CartService.clear(user);
-    return { tickets: minted.map(t => this.getTicketById(user,)) };
+    // Return ticket codes as strings
+    return { tickets: minted.map(t => t.code) };
   }
    static async getMyTickets(user, query) {
     if (!user?.userId) {
@@ -327,6 +330,7 @@ static async validateTicket({ currentUser, eventId, code }) {
     const pageSize = Math.min(Math.max(parseInt(query?.pageSize || '10', 10), 1), 100);
     const status = query?.status;
     const upcoming = String(query?.upcoming) === 'true';
+    const eventId = query?.eventId ? parseInt(query.eventId, 10) : null;
 
     const { total, data } = await TicketMintRepo.listForUser({
       userId: user.userId,
@@ -334,6 +338,7 @@ static async validateTicket({ currentUser, eventId, code }) {
       pageSize,
       status,
       upcoming,
+      eventId: Number.isInteger(eventId) ? eventId : undefined,
     });
 
     return { page, pageSize, total, data };

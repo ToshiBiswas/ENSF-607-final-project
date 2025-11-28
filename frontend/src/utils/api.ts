@@ -44,13 +44,32 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok) {
-    //Backend returns { error: message, code, ...extra }
+    let message: string = 'An error occurred';
+    let code: string | undefined = undefined;
+
+    if (typeof data?.error === 'string') {
+      message = data.error;
+    } else if (data?.error && typeof data.error === 'object') {
+      if (typeof data.error.message === 'string') {
+        message = data.error.message;
+      }
+      if (typeof data.error.code === 'string') {
+        code = data.error.code;
+      }
+    } else if (typeof data?.message === 'string') {
+      message = data.message;
+    }
+
+    if (!code && typeof data?.code === 'string') {
+      code = data.code;
+    }
+
     const error: ApiError = {
-      message: data.error || data.message || 'An error occurred',
-      code: data.code,
+      message,
+      code,
       status: response.status,
-      userId: data.userId,
-      accountId: data.accountId,
+      userId: data?.userId,
+      accountId: data?.accountId,
     };
     throw error;
   }
@@ -116,7 +135,7 @@ export interface UpdateCartItemRequest {
 
 //Checkout types
 export interface CheckoutRequest {
-  usePaymentInfoId?: number;
+  usePaymentInfoId?: { id: number; ccv: string };
   newCard?: {
     number: string;
     name: string;
@@ -162,6 +181,19 @@ export interface StyleAdviceResponse {
   accessories?: string;
   colors?: string;
   tips?: string;
+  // Backend may return full Gemini structure
+  summary?: string;
+  outfits?: Array<{
+    label?: string;
+    items?: string[];
+    accessories?: string[];
+    notes?: string;
+    estimatedCost?: string;
+  }>;
+  dos?: string[];
+  donts?: string[];
+  shoppingList?: string[];
+  error?: string;
 }
 
 //API functions
@@ -231,7 +263,8 @@ export interface UserTicket {
   };
 }
 export interface UserTicketsResponse {
-  tickets: UserTicket[];
+  tickets?: UserTicket[];
+  data?: UserTicket[]; // Backend may return 'data' instead of 'tickets'
 }
 
 export const userApi = {

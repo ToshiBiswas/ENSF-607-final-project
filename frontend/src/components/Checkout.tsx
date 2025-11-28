@@ -11,11 +11,11 @@ export default function Checkout() {
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string[] | null>(null); //stores ticket codes after successful checkout
 
   //payment method selection
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<number | null>(null);
   const [useNewCard, setUseNewCard] = useState(false);
+  const [savedCardCcv, setSavedCardCcv] = useState(''); // CCV for saved payment method
 
   //new card form state
   const [newCard, setNewCard] = useState({
@@ -66,7 +66,17 @@ export default function Checkout() {
 
   //handle input changes for new card form
   const handleCardInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const { name } = e.target;
+    let { value } = e.target;
+
+    if (name === 'ccv') {
+      value = value.replace(/\D/g, '').slice(0, 4);
+    } else if (name === 'exp_month') {
+      value = value.replace(/\D/g, '').slice(0, 2);
+    } else if (name === 'exp_year') {
+      value = value.replace(/\D/g, '').slice(0, 4);
+    }
+
     setNewCard((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -86,7 +96,6 @@ export default function Checkout() {
     e.preventDefault();
     setCheckoutLoading(true);
     setError(null);
-    setSuccess(null);
 
     try {
       //validate payment method selection
@@ -96,10 +105,50 @@ export default function Checkout() {
         return;
       }
 
+      //validate saved card CCV if using saved card
+      if (!useNewCard && selectedPaymentMethod) {
+        if (!savedCardCcv || savedCardCcv.trim() === '') {
+          setError('Please enter the CCV for your saved card');
+          setCheckoutLoading(false);
+          return;
+        }
+      }
+
       //validate new card if using new card
       if (useNewCard) {
         if (!newCard.number || !newCard.name || !newCard.ccv || !newCard.exp_month || !newCard.exp_year) {
           setError('Please fill in all card details');
+          setCheckoutLoading(false);
+          return;
+        }
+        const cleanNumber = newCard.number.replace(/\s/g, '');
+        if (!/^\d{13,19}$/.test(cleanNumber)) {
+          setError('Card number must be 13–19 digits.');
+          setCheckoutLoading(false);
+          return;
+        }
+        const expMonthNum = parseInt(newCard.exp_month, 10);
+        const expYearNum = parseInt(newCard.exp_year, 10);
+        if (Number.isNaN(expMonthNum) || expMonthNum < 1 || expMonthNum > 12) {
+          setError('Expiry month must be between 1 and 12.');
+          setCheckoutLoading(false);
+          return;
+        }
+        if (Number.isNaN(expYearNum)) {
+          setError('Expiry year is invalid.');
+          setCheckoutLoading(false);
+          return;
+        }
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+        if (expYearNum < currentYear || (expYearNum === currentYear && expMonthNum < currentMonth)) {
+          setError('Card is expired. Please use a valid expiry date.');
+          setCheckoutLoading(false);
+          return;
+        }
+        if (!/^\d{3,4}$/.test(newCard.ccv)) {
+          setError('CCV must be 3 or 4 digits.');
           setCheckoutLoading(false);
           return;
         }
@@ -109,31 +158,45 @@ export default function Checkout() {
       const checkoutRequest: CheckoutRequest = {};
       
       if (useNewCard) {
-        //clean card number (remove spaces)
         const cleanNumber = newCard.number.replace(/\s/g, '');
+        const expMonthNum = parseInt(newCard.exp_month, 10);
+        const expYearNum = parseInt(newCard.exp_year, 10);
         checkoutRequest.newCard = {
           number: cleanNumber,
           name: newCard.name.trim(),
           ccv: newCard.ccv,
-          exp_month: parseInt(newCard.exp_month, 10),
-          exp_year: parseInt(newCard.exp_year, 10),
+          exp_month: expMonthNum,
+          exp_year: expYearNum,
         };
       } else {
-        checkoutRequest.usePaymentInfoId = selectedPaymentMethod!;
+        // Send saved payment method with ID and CCV
+        checkoutRequest.usePaymentInfoId = {
+          id: selectedPaymentMethod!,
+          ccv: savedCardCcv.trim(),
+        };
       }
 
       //call checkout API
       const response = await cartApi.checkout(checkoutRequest);
       
-      //success! show ticket codes
-      setSuccess(response.tickets);
+      console.log('Checkout successful, response:', response);
       
-      //clear cart state (cart is cleared on backend)
+      //success! clear cart state (cart is cleared on backend)
       setCart({ owner: { userId: 0 }, items: [] });
+      
+      // Navigate to My Tickets page with success indicator
+      console.log('Navigating to My Tickets...');
+      navigate('/MyAccount/MyTickets?purchase=success');
       
     } catch (err) {
       const apiError = err as ApiError;
-      let errorMessage = apiError.message || 'Checkout failed';
+      // Ensure message is a string, not an object
+      let errorMessage = 'Checkout failed';
+      if (typeof apiError.message === 'string') {
+        errorMessage = apiError.message;
+      } else if (apiError.message && typeof apiError.message === 'object') {
+        errorMessage = JSON.stringify(apiError.message);
+      }
 
       //handle specific error codes
       switch (apiError.code) {
@@ -150,7 +213,8 @@ export default function Checkout() {
           errorMessage = 'Card not recognized. Please verify your card details.';
           break;
         default:
-          errorMessage = apiError.message || 'Checkout failed';
+          // Keep the extracted errorMessage from above
+          break;
       }
 
       setError(errorMessage);
@@ -178,40 +242,6 @@ export default function Checkout() {
     );
   }
 
-  //show success message if checkout was successful
-  if (success && success.length > 0) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-8 px-4" style={{ minHeight: '100vh' }}>
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">✅</div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">Checkout Successful!</h1>
-              <p className="text-lg text-gray-600 mb-6">Your tickets have been purchased successfully.</p>
-              
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
-                <h2 className="text-xl font-semibold text-green-900 mb-4">Your Ticket Codes:</h2>
-                <div className="space-y-2">
-                  {success.map((ticketCode, index) => (
-                    <div key={index} className="text-lg font-mono bg-white p-3 rounded border border-green-200 text-green-800">
-                      {ticketCode}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                onClick={() => navigate('/cart')} //navigate to cart page
-                className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-              >
-                Back to Cart
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const totalCents = calculateTotal();
   const hasItems = cart && cart.items.length > 0;
@@ -295,25 +325,51 @@ export default function Checkout() {
                     {!useNewCard && (
                       <div className="mt-2 space-y-2">
                         {paymentMethods.map((method) => (
-                          <label
+                          <div
                             key={method.paymentInfoId}
-                            className={`block p-3 border rounded-lg cursor-pointer transition-colors ${
+                            className={`block p-3 border rounded-lg transition-colors ${
                               selectedPaymentMethod === method.paymentInfoId
                                 ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-200 hover:border-gray-300'
+                                : 'border-gray-200'
                             }`}
                           >
-                            <input
-                              type="radio"
-                              name="paymentMethod"
-                              value={method.paymentInfoId}
-                              checked={selectedPaymentMethod === method.paymentInfoId}
-                              onChange={() => setSelectedPaymentMethod(method.paymentInfoId)}
-                              className="mr-2"
-                            />
-                            <span className="font-semibold text-gray-900">•••• •••• •••• {method.last4}</span>
-                            <span className="block text-sm text-gray-600">{method.name}</span>
-                          </label>
+                            <label className="cursor-pointer flex items-center">
+                              <input
+                                type="radio"
+                                name="paymentMethod"
+                                value={method.paymentInfoId}
+                                checked={selectedPaymentMethod === method.paymentInfoId}
+                                onChange={() => {
+                                  setSelectedPaymentMethod(method.paymentInfoId);
+                                  setSavedCardCcv(''); // Clear CCV when switching cards
+                                }}
+                                className="mr-2"
+                              />
+                              <div>
+                                <span className="font-semibold text-gray-900">•••• •••• •••• {method.last4}</span>
+                                <span className="block text-sm text-gray-600">{method.name}</span>
+                              </div>
+                            </label>
+                            {selectedPaymentMethod === method.paymentInfoId && (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                <label htmlFor={`ccv-${method.paymentInfoId}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                  CCV (Security Code)
+                                </label>
+                                <input
+                                  type="text"
+                                  id={`ccv-${method.paymentInfoId}`}
+                                  value={savedCardCcv}
+                                  onChange={(e) => {
+                                    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                    setSavedCardCcv(value);
+                                  }}
+                                  placeholder="123"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  required
+                                />
+                              </div>
+                            )}
+                          </div>
                         ))}
                       </div>
                     )}
