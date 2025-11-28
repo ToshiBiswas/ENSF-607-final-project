@@ -16,14 +16,12 @@ export async function apiRequest<T>(
   const token = localStorage.getItem('token');
   
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options.headers,
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
+  
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
+ 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers,

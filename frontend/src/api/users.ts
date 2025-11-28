@@ -2,7 +2,7 @@
  * Users API
  */
 import { apiClient } from './client';
-import { type User } from './auth';
+import type  {  User } from './auth';
 
 export interface UpdateProfileRequest {
   name?: string;
@@ -132,6 +132,8 @@ export const usersApi = {
     const response = await apiClient.get<PaymentMethodsResponse>('/me/payment-methods');
     return response.paymentMethods;
   },
+
+
 
   /**
    * Get user tickets with pagination and filters

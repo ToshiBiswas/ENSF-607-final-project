@@ -5,8 +5,8 @@
 
 // --- API Base URL Resolver (works for all teammates) ---
 const resolveApiBaseUrl = (): string => {
-  const envA = (import.meta as any).env?.VITE_API_BASE_URL;
-  const envB = (import.meta as any).env?.VITE_API_URL;
+  const envA = import.meta.env?.VITE_API_BASE_URL;
+  const envB = import.meta.env?.VITE_API_URL;
   const env = (envA ?? envB)?.toString().trim();
 
   if (env) {

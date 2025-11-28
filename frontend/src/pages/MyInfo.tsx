@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { usersApi, User } from "../api/users";
+import { usersApi } from "../api/users";
+import type { User } from "../api/auth";
 
 const MyInfo: React.FC = () => {
     const [user, setUser] = useState<User | null>(null);
