@@ -12,7 +12,7 @@ const {
   clearRefreshCookie,
   REFRESH_COOKIE_NAME,
 } = require('../utils/jwt');
-
+  
 /**
  * Helper: get a numeric userId from any user shape.
  */
