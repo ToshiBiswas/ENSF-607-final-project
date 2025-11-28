@@ -6,7 +6,6 @@ const asyncHandler = require('../utils/handler');
 const { UserService } = require('../services/UserService');
 const { UserRepo } = require('../repositories/UserRepo');
 const { UserCardRepo } = require('../repositories/UserCardRepo');
-const { UserPreferencesRepo } = require('../repositories/UserPreferencesRepo');
 
 class UsersController {
   /** GET /api/me */

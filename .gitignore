@@ -8539,3 +8539,7 @@ frontend/node_modules/.vite/deps/react_jsx-dev-runtime.js.map
 frontend/node_modules/.vite/deps/react_jsx-runtime.js
 frontend/node_modules/.vite/deps/react_jsx-runtime.js.map
 node_modules
+
+node_modules/
+.vite/
+**/.vite/\.n

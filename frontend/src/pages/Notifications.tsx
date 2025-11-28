@@ -1,34 +1,24 @@
-import React, { useState, useEffect } from "react";
-import { notificationsApi, Notification } from "../api/notifications";
+import React, { useEffect } from "react";
+import { useNotifications } from "../hooks/useNotifications";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 const Notifications: React.FC = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const { notifications, loading, error, deleteNotification } = useNotifications(true, 30000);
 
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/login");
-      return;
     }
-    loadNotifications();
   }, [isAuthenticated, navigate]);
 
-  const loadNotifications = async () => {
+  const handleDeleteNotification = async (notificationId: number) => {
     try {
-      setLoading(true);
-      setError(null);
-      const data = await notificationsApi.getDue();
-      setNotifications(data);
+      await deleteNotification(notificationId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load notifications");
-      console.error("Error loading notifications:", err);
-    } finally {
-      setLoading(false);
+      console.error("Error deleting notification:", err);
     }
   };
 
@@ -201,9 +191,30 @@ const Notifications: React.FC = () => {
                         <h3 className="text-lg font-semibold text-slate-800">
                           {notification.title}
                         </h3>
-                        <span className="text-xs text-slate-500 whitespace-nowrap">
-                          {formatDate(notification.sendAt)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-slate-500 whitespace-nowrap">
+                            {formatDate(notification.sendAt)}
+                          </span>
+                          <button
+                            onClick={() => handleDeleteNotification(notification.notificationId)}
+                            className="text-slate-400 hover:text-red-500 transition-colors"
+                            title="Mark as read"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                       <p className="text-slate-600 mb-3">{notification.message}</p>
                       {notification.eventId && (
