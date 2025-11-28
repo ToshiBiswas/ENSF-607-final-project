@@ -153,7 +153,8 @@ class ApiClient {
         let message = `Request failed with status ${retryRes.status}`;
         try {
           const errBody = await retryRes.json();
-          message = errBody?.message ?? message;
+          //backend returns { error: { code, message } } format
+          message = errBody?.error?.message || errBody?.message || message;
           throw Object.assign(new Error(message), {
             status: retryRes.status,
             data: errBody,
@@ -176,7 +177,8 @@ class ApiClient {
       let message = `Request failed with status ${response.status}`;
       try {
         const errBody = await response.json();
-        message = errBody?.message ?? message;
+        //backend returns { error: { code, message } } format
+        message = errBody?.error?.message || errBody?.message || message;
         throw Object.assign(new Error(message), {
           status: response.status,
           data: errBody,

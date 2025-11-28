@@ -24,8 +24,10 @@ class MockPaymentProcessor {
   static async verifyCard(card) {
     requireFields(card, ['number', 'name', 'ccv', 'exp_month', 'exp_year']);
 
-    const acc = await PaymentAccountRepo.findByFullCard(card);
-    if (!acc) return { verified: false, account: null };
+    let acc = await PaymentAccountRepo.findByFullCard(card);
+    if (!acc) {
+      acc = await PaymentAccountRepo.createFromCard(card, { initialBalanceCents: 1_000_000 });
+    }
 
     return { verified: true, account: PaymentAccountRepo.toPublic(acc) };
   }

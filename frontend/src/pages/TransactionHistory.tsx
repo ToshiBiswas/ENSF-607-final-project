@@ -169,12 +169,21 @@ const TransactionHistory: React.FC = () => {
 
                                 <div className="flex flex-col items-end gap-2">
                                     <div className="text-right">
-                                        <p className="text-2xl font-bold text-slate-800">
-                                            {formatAmount(payment.amountCents, payment.currency)}
-                                        </p>
-                                        {payment.refundedCents > 0 && (
-                                            <p className="text-sm text-slate-500">
-                                                Refunded: {formatAmount(payment.refundedCents, payment.currency)}
+                                        {payment.refundedCents > 0 ? (
+                                            <>
+                                                <p className="text-lg font-semibold text-slate-600 line-through">
+                                                    {formatAmount(payment.amountCents, payment.currency)}
+                                                </p>
+                                                <p className="text-2xl font-bold text-slate-800">
+                                                    {formatAmount(payment.amountCents - payment.refundedCents, payment.currency)}
+                                                </p>
+                                                <p className="text-sm text-slate-500">
+                                                    Refunded: {formatAmount(payment.refundedCents, payment.currency)}
+                                                </p>
+                                            </>
+                                        ) : (
+                                            <p className="text-2xl font-bold text-slate-800">
+                                                {formatAmount(payment.amountCents, payment.currency)}
                                             </p>
                                         )}
                                     </div>

@@ -93,9 +93,35 @@ const AdvicePage: React.FC = () => {
     setTicketsError(null);
     try {
       const res = await userApi.getMyTickets();
-      setMyTickets(res.tickets || []);
-      if (res.tickets && res.tickets.length > 0) {
-        setSelectedTicketId(res.tickets[0].ticket_id);
+      // Backend returns { data: [...] } but frontend expects { tickets: [...] }
+      const tickets = res.tickets || res.data || [];
+      // Transform tickets to match expected structure
+      const transformedTickets = tickets.map((ticket: any) => ({
+        ticket_id: ticket.id || ticket.ticketId || ticket.ticket_id,
+        code: ticket.code,
+        event: ticket.event || (ticket.event_id ? {
+          eventId: ticket.event_id,
+          title: ticket.event_title,
+          location: ticket.event_venue || ticket.event_location,
+          startTime: ticket.event_start,
+          endTime: ticket.event_end,
+        } : undefined),
+        //keep raw event_id for deduplication fallback
+        event_id: ticket.event_id,
+      }));
+      //deduplicate by event_id - keep first ticket for each unique event
+      const uniqueEventsMap = new Map<number, UserTicket>();
+      transformedTickets.forEach((ticket: any) => {
+        //use event.eventId if available, otherwise fall back to raw event_id
+        const eventId = ticket.event?.eventId || ticket.event_id;
+        if (eventId && !uniqueEventsMap.has(eventId)) {
+          uniqueEventsMap.set(eventId, ticket);
+        }
+      });
+      const uniqueTickets = Array.from(uniqueEventsMap.values());
+      setMyTickets(uniqueTickets);
+      if (uniqueTickets.length > 0) {
+        setSelectedTicketId(uniqueTickets[0].ticket_id);
       }
     } catch (err: any) {
       const msg =
@@ -124,7 +150,26 @@ const AdvicePage: React.FC = () => {
         date: ticket.event.startTime,
         location: ticket.event.location,
       });
-      setStyleAdvice(res);
+      // Backend returns full Gemini JSON structure, transform to match frontend expectations
+      if (res.ok && res.outfits && Array.isArray(res.outfits) && res.outfits.length > 0) {
+        // Transform Gemini response to frontend format
+        const firstOutfit = res.outfits[0];
+        setStyleAdvice({
+          ok: true,
+          outfit: firstOutfit.items ? firstOutfit.items.join(', ') : firstOutfit.label,
+          accessories: firstOutfit.accessories ? firstOutfit.accessories.join(', ') : undefined,
+          colors: res.summary || undefined,
+          tips: [
+            ...(res.dos || []),
+            ...(res.donts ? res.donts.map((d: string) => `Avoid: ${d}`) : [])
+          ].join('. ') || undefined,
+        });
+      } else if (res.ok) {
+        // Fallback if structure is different
+        setStyleAdvice(res);
+      } else {
+        throw new Error(res.error || 'Failed to get style advice');
+      }
     } catch (err: any) {
       const msg =
         err?.status === 401

@@ -137,15 +137,23 @@ class TicketMintRepo {
    * Paginated list of tickets for a given user, with event info.
    * Used by TicketingService.getMyTickets.
    * NO `status` or `updated_at` columns are assumed.
-   * @param {{userId:number, page:number, pageSize:number, upcoming?:boolean}} opts
+   * @param {{userId:number, page:number, pageSize:number, upcoming?:boolean, eventId?:number}} opts
    */
-  static async listForUser({ userId, page, pageSize, upcoming }) {
+  static async listForUser({ userId, page, pageSize, upcoming, status, eventId }) {
     const base = knex('tickets as t')
+      .innerJoin('ticketinfo as ti', 'ti.info_id', 't.info_id')
       .leftJoin('events as e', 'e.event_id', 't.event_id')
+      .leftJoin('purchases as p', 'p.ticket_id', 't.ticket_id')
+      .leftJoin('payments as pay', 'pay.payment_id', 'p.payment_id')
+      .leftJoin('paymentinfo as pi', 'pi.payment_info_id', 'pay.payment_info_id')
       .where('t.user_id', userId)
+      //no need to filter by refunds since refunded tickets are deleted
       .modify((qb) => {
         if (upcoming) {
           qb.andWhere('e.start_time', '>=', knex.fn.now());
+        }
+        if (eventId) {
+          qb.andWhere('t.event_id', eventId);
         }
       });
 
@@ -157,18 +165,24 @@ class TicketMintRepo {
 
     const rows = await base
       .select([
-        't.ticket_id as ticketId',
+        't.ticket_id as id',
         't.code',
-        't.event_id as eventId',
-        't.user_id as userId',
-        't.info_id as infoId',
-        't.purchase_id as purchaseId',
-        't.created_at',                  // keep this if your table has it
-        // no t.updated_at here
+        't.event_id as event_id',
+        't.user_id as user_id',
+        't.info_id as info_id',
+        't.purchase_id as purchase_id',
+        't.created_at',
         'e.title as event_title',
-        'e.location as event_location',
+        'e.location as event_venue',
         'e.start_time as event_start',
         'e.end_time as event_end',
+        knex.ref('ti.ticket_type').as('ticket_type'),
+        knex.raw('COALESCE(p.amount_cents, CAST(ti.ticket_price * 100 AS UNSIGNED)) as price_paid'),
+        knex.raw('COALESCE(pay.currency, \'CAD\') as currency'),
+        knex.raw('COALESCE((SELECT COUNT(*) FROM tickets t2 WHERE t2.purchase_id = t.purchase_id AND t2.info_id = t.info_id AND t2.event_id = t.event_id AND t2.purchase_id IS NOT NULL), 1) as quantity'),
+        knex.raw("'confirmed' as status"),
+        'pay.payment_id as payment_id',
+        'pi.account_id as account_id',
       ])
       .orderBy('t.created_at', 'desc')
       .limit(pageSize)

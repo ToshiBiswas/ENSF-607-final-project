@@ -1,6 +1,7 @@
 // src/controllers/AuthController.js
 const bcrypt = require('bcrypt'); // or 'bcryptjs' if that’s what you use elsewhere
 const asyncHandler = require('../utils/handler');
+const { AppError } = require('../utils/errors');
 const { UserRepo } = require('../repositories/UserRepo');
 const { RefreshTokenRepo } = require('../repositories/RefreshTokenRepo');
 const {
@@ -25,16 +26,22 @@ class AuthController {
    * Body: { name, email, password }
    */
   static register = asyncHandler(async (req, res) => {
-    const { name, email, password } = req.body;
-    if (!name || !email || !password) {
+    const nameInput = typeof name === 'string' ? name.trim() : '';
+    const emailInput = typeof email === 'string' ? email.trim() : '';
+    const passwordInput = typeof password === 'string' ? password : '';
+
+    if (!nameInput || !emailInput || !passwordInput) {
       throw new AppError('Name, email, and password are required', 400, { code: 'MISSING_FIELDS' });
     }
-    if (typeof password !== 'string' || password.length < 6) {
+    if (/\d/.test(nameInput)) {
+      throw new AppError('Name cannot contain numbers', 400, { code: 'INVALID_NAME' });
+    }
+    if (passwordInput.length < 6) {
       throw new AppError('Password must be at least 6 characters', 400, { code: 'WEAK_PASSWORD' });
     }
 
     // 1) check if email exists
-    const existing = await UserRepo.findByEmail(email);
+    const existing = await UserRepo.findByEmail(emailInput);
     if (existing) {
       return res.status(400).json({
         error: { code: 'EMAIL_TAKEN', message: 'Email already in use' },
@@ -42,12 +49,12 @@ class AuthController {
     }
 
     // 2) hash password
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(passwordInput, 10);
 
     // 3) create user (UserRepo expects passwordHash in camelCase)
     const user = await UserRepo.insert({
-      name,
-      email,
+      name: nameInput,
+      email: emailInput,
       passwordHash,
     });
 
@@ -69,34 +76,34 @@ class AuthController {
    */
   static login = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
-    if (!email || !password) {
-      throw new AppError('Email and password are required', 400, { code: 'MISSING_FIELDS' });
-    }
-    const row = await UserRepo.findAuthByEmail(email);
-    if (!row) {
-      return res.status(401).json({
-        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' },
-      });
-    }
-
-    const ok = await bcrypt.compare(password, row.password_hash);
-    if (!ok) {
-      return res.status(401).json({
-        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' },
-      });
-    }
-
-    // load domain user (no password) for responses
-    const user = await UserRepo.findById(row.user_id);
-
-    const { accessToken, refreshToken } = await generateTokenPair(user);
-    setRefreshCookie(res, refreshToken);
-
-    res.json({
-      accessToken,
-      user,
+  if (!email || !password) {
+    throw new AppError('Email and password are required', 400, { code: 'MISSING_FIELDS' });
+  }
+  const row = await UserRepo.findAuthByEmail(email);
+  if (!row) {
+    return res.status(401).json({
+      error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' },
     });
+  }
+
+  const ok = await bcrypt.compare(password, row.password_hash);
+  if (!ok) {
+    return res.status(401).json({
+      error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' },
+    });
+  }
+
+  // load domain user (no password) for responses
+  const user = await UserRepo.findById(row.user_id);
+
+  const { accessToken, refreshToken } = await generateTokenPair(user);
+  setRefreshCookie(res, refreshToken);
+
+  res.json({
+    accessToken,
+    user,
   });
+});
 
   /**
    * POST /api/auth/refresh
