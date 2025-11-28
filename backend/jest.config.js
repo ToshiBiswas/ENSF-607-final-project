@@ -1,25 +1,35 @@
 /** @type {import('jest').Config} */
 module.exports = {
   projects: [
-    // UNIT TESTS (keep your current setup)
+    // ===========================
+    // UNIT TESTS (mocked, no DB)
+    // ===========================
     {
       displayName: 'unit',
       testEnvironment: 'node',
       clearMocks: true,
-      roots: ['<rootDir>/src/__tests__'],
-      testMatch: ['**/__tests__/**/*.test.js'],
-      setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup/jest.setup.js'],
 
+      // Only pick up files like:
+      // src/__tests__/unit/.../*.unit.test.js
+      testMatch: ['<rootDir>/src/__tests__/unit/**/*.unit.test.js'],
+
+      // Optional: if you have extra Jest setup (e.g., custom matchers)
+      // make sure this file exists, or remove this line.
+      setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup/jest.setup.js'],
     },
 
-    // INTEGRATION TESTS (real DB, no mocks)
+    // ===========================
+    // INTEGRATION TESTS (real DB)
+    // ===========================
     {
       displayName: 'integration',
       testEnvironment: 'node',
+
+      // Integration tests live here and end with .int.test.js
       testMatch: ['<rootDir>/src/__tests__/integration/**/*.int.test.js'],
+
       globalSetup: '<rootDir>/src/__tests__/integration/globalSetup.js',
       globalTeardown: '<rootDir>/src/__tests__/integration/globalTeardown.js',
-      // no jest.setup.js here – we *want* the real knex
     },
   ],
 };
