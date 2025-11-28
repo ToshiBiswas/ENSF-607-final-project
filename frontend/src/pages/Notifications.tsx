@@ -7,6 +7,7 @@ const Notifications: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { notifications, loading, error, deleteNotification, refresh: loadNotifications } = useNotifications(true, 30000);
+
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/login");

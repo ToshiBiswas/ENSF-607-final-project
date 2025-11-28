@@ -64,14 +64,14 @@ const Navbar: React.FC = () => {
                 <Link to="/MyAccount" style={linkStyle}>
                     My Account
                 </Link>
+                <Link to="/MyAccount/MyEvents" style={linkStyle}>
+                    My Events
+                </Link>
                 <Link to="/cart" style={linkStyle}>
                     Cart
                 </Link>
                 <Link to="/checkout" style={linkStyle}>
                     Checkout
-                </Link>
-                <Link to="/payment-info" style={linkStyle}>
-                    Payment Info
                 </Link>
                 <button onClick={handleLogout} style={buttonStyle}>
                     Logout

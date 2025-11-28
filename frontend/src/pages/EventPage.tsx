@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { cartApi, ApiError } from '../utils/api';
+import { eventsApi, type Event } from '../api/events';
 
 type Ticket = {
   infoId: number;
@@ -9,31 +10,6 @@ type Ticket = {
   quantity: number;
   left: number;
 };
-
-type Event = {
-  eventId: number;
-  title: string;
-  description: string;
-  location: string;
-  startTime: string;
-  endTime: string;
-  organizer: { name: string };
-  categories: { categoryId: number; value: string }[];
-};
-
-// Same resolver as apiClient to avoid env mismatches in teammates' machines
-const resolveApiBaseUrl = (): string => {
-  const envA = (import.meta as any).env?.VITE_API_BASE_URL;
-  const envB = (import.meta as any).env?.VITE_API_URL;
-  const env = (envA ?? envB)?.toString().trim();
-  if (env) {
-    const trimmed = env.replace(/\/+$/, '');
-    return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
-  }
-  return '/api';
-};
-
-const API_BASE_URL = resolveApiBaseUrl();
 
 export function EventPage({ eventId }: { eventId: number }) {
   const navigate = useNavigate();
@@ -48,35 +24,13 @@ export function EventPage({ eventId }: { eventId: number }) {
       setLoading(true);
       setError(null);
       try {
-        const eventUrl = `${API_BASE_URL}/events/${eventId}`;
-        const ticketsUrl = `${API_BASE_URL}/events/${eventId}/tickets`;
-
-        const [eventRes, ticketRes] = await Promise.all([
-          fetch(eventUrl),
-          fetch(ticketsUrl),
+        const [eventData, ticketTypes] = await Promise.all([
+          eventsApi.getById(eventId),
+          eventsApi.getTicketTypes(eventId).catch(() => []),
         ]);
 
-        if (!eventRes.ok) {
-          const msg =
-            eventRes.status === 404
-              ? 'Event not found'
-              : `Failed to load event (HTTP ${eventRes.status})`;
-          throw new Error(msg);
-        }
-
-        const { event } = await eventRes.json();
-
-        // Tickets may not exist yet; show empty list instead of error
-        let ticketTypes: Ticket[] = [];
-        if (ticketRes.ok) {
-          const payload = await ticketRes.json().catch(() => ({}));
-          if (Array.isArray(payload?.ticketTypes)) {
-            ticketTypes = payload.ticketTypes;
-          }
-        }
-
-        setEvent(event);
-        setTickets(ticketTypes);
+        setEvent(eventData);
+        setTickets(ticketTypes as Ticket[]);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load event');
       } finally {
@@ -114,7 +68,7 @@ export function EventPage({ eventId }: { eventId: number }) {
         ticket_info_id: ticketInfoId,
         quantity: 1,
       });
-      // Navigate to cart after successful add
+      //navigate to cart after successful add
       navigate('/cart');
     } catch (err) {
       const apiError = err as ApiError;

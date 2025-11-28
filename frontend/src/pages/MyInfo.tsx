@@ -38,10 +38,36 @@ const MyInfo: React.FC = () => {
         try {
             setError(null);
             
-            // Update profile
+            //validate name - only letters and spaces
+            const trimmedName = formData.name.trim();
+            if (!trimmedName) {
+                setError("Name is required");
+                return;
+            }
+            if (!/^[a-zA-Z\s]+$/.test(trimmedName)) {
+                setError("Name can only contain letters and spaces");
+                return;
+            }
+            
+            //validate email - must contain @ sign like sign in page
+            const trimmedEmail = formData.email.trim();
+            if (!trimmedEmail) {
+                setError("Email is required");
+                return;
+            }
+            if (!trimmedEmail.includes('@')) {
+                setError("Email must contain @ sign");
+                return;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+                setError("Please enter a valid email address");
+                return;
+            }
+            
+            //update profile
             const updatedUser = await usersApi.updateProfile({
-                name: formData.name,
-                email: formData.email,
+                name: trimmedName,
+                email: trimmedEmail,
             });
             setUser(updatedUser);
 
@@ -93,9 +119,11 @@ const MyInfo: React.FC = () => {
                         <input
                             type="text"
                             value={formData.name}
-                            onChange={(e) =>
-                                setFormData({ ...formData, name: e.target.value })
-                            }
+                            onChange={(e) => {
+                                //only allow letters and spaces
+                                const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                                setFormData({ ...formData, name: value });
+                            }}
                             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009245] focus:border-[#009245]"
                         />
                     </div>
@@ -111,6 +139,7 @@ const MyInfo: React.FC = () => {
                                 setFormData({ ...formData, email: e.target.value })
                             }
                             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009245] focus:border-[#009245]"
+                            placeholder="you@example.com"
                         />
                     </div>
                     <div className="flex gap-3">
