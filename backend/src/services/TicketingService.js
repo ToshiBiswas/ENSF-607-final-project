@@ -241,7 +241,7 @@ static async validateTicket({ currentUser, eventId, code }) {
         }
 
         // 2. Check event still purchasable
-        const evt = await EventRepo.findById(locked.row.event_id);
+        let evt = await EventRepo.findById(locked.row.event_id);
         if (!evt || !evt.purchasable()) {
           throw new AppError('Event not available', 400);
         }
@@ -265,7 +265,7 @@ static async validateTicket({ currentUser, eventId, code }) {
         minted.push(...mintedBatch);
 
         // 5. Queue notifications – safe to use non-trx here since it's just an insert
-        const evt = await EventRepo.findById(locked.row.event_id);
+        evt = await EventRepo.findById(locked.row.event_id);
         await NotificationService.queue({
           userId: user.userId,
           eventId: locked.row.event_id,
