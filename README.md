@@ -379,5 +379,3 @@ For issues, questions, or contributions, please:
 
 ---
 
-**Built with ❤️ for ENSF 607**
-
