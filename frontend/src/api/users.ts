@@ -8,6 +8,7 @@ export interface UpdateProfileRequest {
   name?: string;
   email?: string;
 }
+export type { User }; 
 
 export interface SetPreferencesRequest {
   location?: string;

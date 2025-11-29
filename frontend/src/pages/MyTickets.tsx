@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { usersApi, Ticket } from "../api/users";
+import { usersApi, type Ticket } from '../api/users';
 
 const MyTickets: React.FC = () => {
     const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -16,7 +16,7 @@ const MyTickets: React.FC = () => {
             setError(null);
             const data = await usersApi.getTickets();
             console.log(data);
-            setTickets(data);
+            setTickets(data.data ?? data.tickets ?? []);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to load tickets");
             console.error("Error loading tickets:", err);

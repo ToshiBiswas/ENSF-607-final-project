@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import './MyInfoPage.css';
 import { usersApi, type User } from '../api/users';
 
+
 type UserPreferences = {
   location?: string;
   categoryId?: number;
