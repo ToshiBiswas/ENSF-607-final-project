@@ -19,13 +19,7 @@ export interface UserResponse {
   user: User;
 }
 
-export interface PreferencesResponse {
-  preferences: {
-    preferenceId: number;
-    location?: string;
-    preferredCategory?: string;
-  };
-}
+
 
 export interface PaymentMethodsResponse {
   paymentMethods: Array<{

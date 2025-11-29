@@ -190,31 +190,7 @@ const MyInfo: React.FC = () => {
                         </p>
                     </div>
 
-                    {user?.preferences && (
-                        <>
-                            {user.preferences.location && (
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-500 mb-1">
-                                        Location
-                                    </label>
-                                    <p className="text-lg text-slate-800">
-                                        {user.preferences.location}
-                                    </p>
-                                </div>
-                            )}
-
-                            {user.preferences.preferredCategory && (
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-500 mb-1">
-                                        Preferred Category
-                                    </label>
-                                    <p className="text-lg text-slate-800">
-                                        {user.preferences.preferredCategory}
-                                    </p>
-                                </div>
-                            )}
-                        </>
-                    )}
+                    
                 </div>
             )}
         </div>

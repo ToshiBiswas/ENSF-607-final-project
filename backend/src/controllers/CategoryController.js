@@ -17,6 +17,15 @@ class CategoryController {
     res.json({ categories });
   });
 
+  /**
+   * GET /api/categories/:name/events
+   * Return events in the given category value (case-insensitive).
+   */
+  static eventsByCategory = asyncHandler(async (req, res) => {
+    const { name } = req.params;
+    const events = await CategoryService.getEventsByCategoryValue(name);
+    res.json({ events });
+  });
 
 
 }

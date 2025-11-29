@@ -69,16 +69,11 @@ class EventService {
       endTime,
       categories = [],
       ticketInfos = [],
+      ticketTypes = [],
       payment,       // { existingCard?: number, newCard?: { number, name, ccv, exp_month, exp_year } }
     } = {}
   ) {
     const normTitle = normalizeTitle(title);
-    if (!payment) {
-      throw new AppError('Payment method is required', 400, {
-        code: 'PAYMENT_METHOD_REQUIRED',
-        userId: organizerId,
-      });
-    }
     //check required fields are present
     if (!normTitle || !location || !startTime || !endTime) {
       throw new AppError('Missing required fields', 400, {
@@ -123,6 +118,34 @@ class EventService {
     //use normalized dates so db gets consistent values
     startTime = start;
     endTime = end;
+
+    // ----- Ticket validation: all tickets are paid & at least one > $1 -----
+    // Normalize ticket source: prefer explicit ticketInfos, otherwise fall back to ticketTypes
+    const ticketSource = Array.isArray(ticketInfos) && ticketInfos.length
+      ? ticketInfos
+      : (Array.isArray(ticketTypes) ? ticketTypes : []);
+
+    if (!Array.isArray(ticketSource) || ticketSource.length === 0) {
+      throw new AppError('At least one ticket type is required', 400, {
+        code: 'TICKETS_REQUIRED',
+      });
+    }
+
+    // Require that at least one ticket type has price > $1
+    const hasPaidTicket = ticketSource.some((ti) => {
+      const priceRaw =
+        ti?.price ??
+        ti?.ticketPrice ??
+        ti?.ticket_price;
+      const price = Number(priceRaw);
+      return Number.isFinite(price) && price > 1;
+    });
+
+    if (!hasPaidTicket) {
+      throw new AppError('At least one ticket type must have price greater than $1', 400, {
+        code: 'MIN_TICKET_PRICE',
+      });
+    }
 
     //check title is unique (case-insensitive)
     if (await EventRepo.existsTitleCI(normTitle)) {
@@ -186,8 +209,8 @@ class EventService {
       sendAt: new Date() // Send immediately
     });
 
-    if (Array.isArray(ticketInfos) && ticketInfos.length) {
-      await EventRepo.upsertTicketInfos(evt.eventId, ticketInfos);
+    if (Array.isArray(ticketSource) && ticketSource.length) {
+      await EventRepo.upsertTicketInfos(evt.eventId, ticketSource);
     }
 
     return EventRepo.findById(evt.eventId);
@@ -251,6 +274,18 @@ class EventService {
     });
 
     return updatedEvent;
+  }
+
+  /**
+   * List events by category value (non-paginated), case-insensitive.
+   */
+  static async listByCategory(value) {
+    const v = String(value ?? '').trim();
+    if (!v) {
+      const { rows } = await EventRepo.listAllPaginated({ page: 1, pageSize: 1000 });
+      return Promise.all(rows.map((r) => EventRepo.toDomain(r)));
+    }
+    return EventRepo.findByCategoryValue(v);
   }
     /**
    * List events for a given category value, with pagination.
