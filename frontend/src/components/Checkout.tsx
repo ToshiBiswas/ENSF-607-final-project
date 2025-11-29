@@ -200,6 +200,15 @@ export default function Checkout() {
 
       //handle specific error codes
       switch (apiError.code) {
+        case 'PAYMENT_DECLINED':
+          //check if it's insufficient funds
+          if (apiError.reason === 'INSUFFICIENT_FUNDS' || apiError.message?.toLowerCase().includes('insufficient funds')) {
+            errorMessage = 'Insufficient funds. Your payment method does not have enough balance to complete this purchase.';
+          } else {
+            //keep the original message for other payment decline reasons
+            errorMessage = apiError.message || 'Payment was declined. Please try a different payment method.';
+          }
+          break;
         case 'CARD_EXPIRED':
           errorMessage = 'This card has expired. Please use a valid card.';
           break;
@@ -213,7 +222,12 @@ export default function Checkout() {
           errorMessage = 'Card not recognized. Please verify your card details.';
           break;
         default:
-          // Keep the extracted errorMessage from above
+          //check if message contains insufficient funds even if code doesn't match
+          if (apiError.message?.toLowerCase().includes('insufficient funds')) {
+            errorMessage = 'Insufficient funds. Your payment method does not have enough balance to complete this purchase.';
+          } else {
+            //keep the extracted errorMessage from above
+          }
           break;
       }
 

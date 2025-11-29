@@ -37,12 +37,35 @@ class EventsController {
    */
   static listMine = asyncHandler(async (req, res) => {
     const organizerId = req.user.userId;
-    console.log(organizerId)
-    const events = await EventService.listMine(organizerId);
-    for (let i = 0; i < events.length;i++){
-      events[i].organizer = events[i].organizer.name;
+    if (!organizerId || !Number.isInteger(Number(organizerId))) {
+      return res.status(400).json({ error: { code: 'INVALID_USER_ID', message: 'Invalid user ID' } });
     }
-    res.json({ events });
+    
+    //query already filters by organizer_id, but double-check in response
+    const events = await EventService.listMine(organizerId);
+    
+    //verify all events belong to this organizer by comparing userId
+    const filteredEvents = events.filter(evt => {
+      if (!evt.organizer) {
+        console.warn(`Event ${evt.eventId} has no organizer, excluding from results`);
+        return false;
+      }
+      const evtOrganizerId = evt.organizer.userId || evt.organizer.user_id;
+      const matches = Number(evtOrganizerId) === Number(organizerId);
+      if (!matches) {
+        console.warn(`Event ${evt.eventId} organizer ID ${evtOrganizerId} does not match user ID ${organizerId}, excluding from results`);
+      }
+      return matches;
+    });
+    
+    console.log(`User ${organizerId} requested their events. Found ${events.length} events, ${filteredEvents.length} after filtering.`);
+    
+    for (let i = 0; i < filteredEvents.length; i++){
+      if (filteredEvents[i].organizer) {
+        filteredEvents[i].organizer = filteredEvents[i].organizer.name;
+      }
+    }
+    res.json({ events: filteredEvents });
   });
 
   /**

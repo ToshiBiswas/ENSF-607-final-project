@@ -103,10 +103,33 @@ static async toDomain(row) {
     );
   }
   static async listByOrganizer(organizerId) {
+    //validate organizerId is a number before querying
+    const orgId = Number(organizerId);
+    if (!Number.isInteger(orgId) || orgId <= 0) {
+      throw new Error(`Invalid organizer ID: ${organizerId}`);
+    }
+    
+    //filter by organizer_id to only return events this user created
+    //use strict equality to prevent type coercion issues
     const rows = await knex('events')
-      .where({ organizer_id: organizerId })
-      .orderBy('event_id', 'desc'); // safe ordering if created_at not present
-    return Promise.all(rows.map(r => this.toDomain(r)));
+      .where('organizer_id', '=', orgId)
+      .orderBy('event_id', 'desc');
+    
+    console.log(`Querying events for organizer_id=${orgId}, found ${rows.length} rows`);
+    
+    //double-check organizer_id matches before returning
+    const validRows = rows.filter(row => {
+      const rowOrgId = Number(row.organizer_id);
+      const matches = rowOrgId === orgId;
+      if (!matches) {
+        console.warn(`Row event_id=${row.event_id} has organizer_id=${row.organizer_id} which doesn't match requested ${orgId}`);
+      }
+      return matches;
+    });
+    
+    console.log(`After filtering, ${validRows.length} valid rows for organizer_id=${orgId}`);
+    
+    return Promise.all(validRows.map(r => this.toDomain(r)));
   }
 
   /** Pull categories for an event */

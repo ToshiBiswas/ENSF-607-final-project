@@ -7,6 +7,10 @@ export interface ApiError {
   status?: number;
   userId?: number;
   accountId?: string;
+  reason?: string;
+  details?: {
+    reason?: string;
+  };
 }
 
 export async function apiRequest<T>(
@@ -62,12 +66,22 @@ export async function apiRequest<T>(
       code = data.code;
     }
 
+    //extract reason from error details if available
+    let reason: string | undefined = undefined;
+    if (data?.error?.details?.reason) {
+      reason = data.error.details.reason;
+    } else if (data?.details?.reason) {
+      reason = data.details.reason;
+    }
+
     const error: ApiError = {
       message,
       code,
       status: response.status,
       userId: data?.userId,
       accountId: data?.accountId,
+      reason,
+      details: data?.error?.details || data?.details,
     };
     throw error;
   }
