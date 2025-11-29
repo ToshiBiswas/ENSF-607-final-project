@@ -12,6 +12,7 @@ export interface User {
     location?: string | null;
     preferredCategory?: string | null;
   };
+  createdAt?: string; 
 }
 
 interface AuthResponse {

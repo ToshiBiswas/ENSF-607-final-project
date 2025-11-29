@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { usersApi } from '../api/users';
+import type { Ticket as ApiTicket } from '../api/users'; // Import with alias
+
 
 type Ticket = {
   id: number;
@@ -52,13 +54,34 @@ export function MyTicketPage() {
     }
   }, [searchParams, setSearchParams]);
 
+  // helper to normalize tickets from API shape (ApiTicket) -> local Ticket shape
+  const normalizeTicket = (t: ApiTicket | any): Ticket => ({
+    id: t.id ?? t.ticketId ?? t.ticket_id ?? 0,
+    code: t.code ?? '',
+    event_id: t.event?.eventId ?? t.event_id ?? t.eventId ?? undefined,
+    user_id: t.user_id ?? t.userId ?? undefined,
+    quantity: t.quantity ?? t.qty ?? 1,
+    price_paid: t.price_paid ?? t.ticketInfo?.price ?? t.ticket_price ?? 0,
+    currency: t.currency ?? 'USD',
+    status: t.status ?? 'active',
+    created_at: t.createdAt ?? t.created_at ?? '',
+    updated_at: t.updatedAt ?? t.updated_at ?? '',
+    event_title: t.event?.title ?? t.event_title ?? '',
+    event_venue: t.event?.venue ?? t.event?.location ?? t.event_venue ?? t.event_location ?? '',
+    event_start: t.event?.startTime ?? t.event_start ?? '',
+    event_end: t.event?.endTime ?? t.event_end ?? '',
+    ticket_type: t.ticketInfo?.type ?? t.ticket_type ?? '',
+    payment_id: t.payment?.paymentId ?? t.payment_id ?? undefined,
+    account_id: t.account_id ?? t.accountId ?? undefined,
+  });
+
   //load unique events for filter dropdown
   useEffect(() => {
     async function loadUniqueEvents() {
       try {
         const data = await usersApi.getTickets({ page: 1, pageSize: 1000 });
         const eventsMap = new Map<number, { event_id: number; event_title: string }>();
-        (data.data ?? []).forEach((ticket: any) => {
+        (data.data ?? []).map(normalizeTicket).forEach((ticket: Ticket) => {
           if (ticket.event_id && ticket.event_title && !eventsMap.has(ticket.event_id)) {
             eventsMap.set(ticket.event_id, {
               event_id: ticket.event_id,
@@ -86,7 +109,7 @@ export function MyTicketPage() {
         pageSize,
         eventId: eventFilter ? parseInt(eventFilter, 10) : undefined,
       });
-      setTickets((data.data ?? []) as Ticket[]);
+      setTickets((data.data ?? []).map(normalizeTicket));
       setTotal(data.total ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load tickets');
