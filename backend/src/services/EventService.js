@@ -73,7 +73,12 @@ class EventService {
     } = {}
   ) {
     const normTitle = normalizeTitle(title);
-
+    if (!payment) {
+      throw new AppError('Payment method is required', 400, {
+        code: 'PAYMENT_METHOD_REQUIRED',
+        userId: organizerId,
+      });
+    }
     //check required fields are present
     if (!normTitle || !location || !startTime || !endTime) {
       throw new AppError('Missing required fields', 400, {
