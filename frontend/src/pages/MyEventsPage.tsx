@@ -12,7 +12,6 @@ export function MyEventsPage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [newCategoryInput, setNewCategoryInput] = useState('');
 
   //form state
   const [formData, setFormData] = useState({
@@ -24,6 +23,14 @@ export function MyEventsPage() {
     selectedCategories: [] as string[],
     ticketInfos: [{ type: '', price: '', quantity: '' }] as Array<{ type: string; price: string; quantity: string }>,
   });
+
+  // minimum start time = now + 2 days, formatted for datetime-local input
+  const minStartDateTimeLocal = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 2);
+    d.setSeconds(0, 0);
+    return d.toISOString().slice(0, 16);
+  })();
 
   useEffect(() => {
     loadEvents();
@@ -51,28 +58,6 @@ export function MyEventsPage() {
       console.error('Failed to load categories:', err);
     }
   }
-
-  const addNewCategory = () => {
-    const trimmed = newCategoryInput.trim();
-    if (!trimmed) return;
-    
-    //check if category already exists
-    const exists = categories.some(cat => cat.value.toLowerCase() === trimmed.toLowerCase());
-    if (exists) {
-      setNewCategoryInput('');
-      return;
-    }
-    
-    //add to selected categories if not already selected
-    if (!formData.selectedCategories.includes(trimmed)) {
-      setFormData(prev => ({
-        ...prev,
-        selectedCategories: [...prev.selectedCategories, trimmed]
-      }));
-    }
-    
-    setNewCategoryInput('');
-  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -159,8 +144,10 @@ export function MyEventsPage() {
       return 'Invalid end time';
     }
 
-    if (start <= now) {
-      return 'Event must start in the future';
+    // must be at least 2 days in the future
+    const minStart = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
+    if (start < minStart) {
+      return 'Event must start at least 2 days from now';
     }
 
     if (end <= start) {
@@ -228,8 +215,7 @@ export function MyEventsPage() {
         selectedCategories: [],
         ticketInfos: [{ type: '', price: '', quantity: '' }],
       });
-      setNewCategoryInput('');
-      await loadCategories(); //reload categories to show newly created ones
+      await loadCategories();
       setShowCreateForm(false);
       await loadEvents();
     } catch (err: any) {
@@ -357,7 +343,25 @@ export function MyEventsPage() {
                     id="startTime"
                     type="datetime-local"
                     value={formData.startTime}
-                    onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+                    min={minStartDateTimeLocal}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData(prev => {
+                        let updatedEnd = prev.endTime;
+                        if (updatedEnd) {
+                          const newStart = new Date(value);
+                          const currentEnd = new Date(updatedEnd);
+                          if (
+                            !isNaN(newStart.getTime()) &&
+                            !isNaN(currentEnd.getTime()) &&
+                            currentEnd <= newStart
+                          ) {
+                            updatedEnd = '';
+                          }
+                        }
+                        return { ...prev, startTime: value, endTime: updatedEnd };
+                      });
+                    }}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009245] focus:border-[#009245]"
                     required
                   />
@@ -370,6 +374,7 @@ export function MyEventsPage() {
                     id="endTime"
                     type="datetime-local"
                     value={formData.endTime}
+                    min={formData.startTime || undefined}
                     onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009245] focus:border-[#009245]"
                     required
@@ -400,31 +405,7 @@ export function MyEventsPage() {
                       </button>
                     ))}
                   </div>
-                  
-                  {/*add new category*/}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Add new category"
-                      value={newCategoryInput}
-                      onChange={(e) => setNewCategoryInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          addNewCategory();
-                        }
-                      }}
-                      className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#009245] focus:border-[#009245]"
-                    />
-                    <button
-                      type="button"
-                      onClick={addNewCategory}
-                      className="px-4 py-2 bg-[#44CE85] text-white rounded-lg hover:bg-[#009245] transition-colors font-semibold"
-                    >
-                      Add Category
-                    </button>
-                  </div>
-                  
+
                   {/*selected categories display*/}
                   {formData.selectedCategories.length > 0 && (
                     <div className="pt-2">
@@ -509,7 +490,6 @@ export function MyEventsPage() {
                   + Add Ticket Type
                 </button>
               </div>
-
 
               <div className="flex gap-4 pt-4">
                 <button
