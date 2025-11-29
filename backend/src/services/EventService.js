@@ -379,6 +379,7 @@ class EventService {
    * Returns a summary of what it did.
    */
   static async settleAndDeleteExpiredEvents() {
+    console.log("point");
     // 1) Find expired events
     let expired = [];
     try {
@@ -391,7 +392,6 @@ class EventService {
       // Re-throw other errors
       throw err;
     }
-    
     const results = [];
     if (!expired || !expired.length) {
       return { count: 0, payouts: [] };
@@ -407,6 +407,7 @@ class EventService {
       try {
         if (typeof PaymentRepo.listApprovedForEvent === 'function') {
           purchases = await PaymentRepo.listApprovedForEvent(eventId);
+          console.log()
         }
       } catch (e) {
         // If something goes wrong fetching purchases, record error and skip payout,
