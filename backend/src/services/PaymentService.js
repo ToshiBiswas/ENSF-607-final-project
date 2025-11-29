@@ -30,7 +30,6 @@ class PaymentService {
       exp_month,
       exp_year,
     });
-
     if (!result?.verified) {
       throw new AppError('Invalid card', 400, {
         code: 'INVALID_CARD',
