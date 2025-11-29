@@ -21,6 +21,7 @@ import TransactionHistory from "@pages/TransactionHistory";
 import { MyTicketPage } from "@pages/MyTicketPage";
 import { MyEventsPage } from "@pages/MyEventsPage";
 import { ValidateTicketPage } from "@pages/ValidateTicketPage";
+import Notifications from "@pages/Notifications";
 function App() {
   return (
     <AuthProvider>
@@ -44,6 +45,8 @@ function App() {
           
           {/* About route */}
           <Route path="/about" element={<About />} />
+          <Route path="/notifications" element={<Notifications />} />
+
           {/* MyAccount with nested routes */}
           <Route path="/MyAccount" element={<MyAccount />}>
             <Route index element={<MyAccountDashboard />} />
