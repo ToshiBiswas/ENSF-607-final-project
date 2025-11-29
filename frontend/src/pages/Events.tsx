@@ -13,10 +13,10 @@ const Events: React.FC = () => {
     const [selectedCategory, setSelectedCategory] = useState<string>("");
     const navigate = useNavigate();
 
-    // Categories loaded from backend
+    //categories loaded from backend
     const [categories, setCategories] = useState<Category[]>([]);
     useEffect(() => {
-        // Load categories from backend
+        //load categories from backend
         getCategories()
             .then(setCategories)
             .catch((err) => {
@@ -75,11 +75,11 @@ const Events: React.FC = () => {
         });
     };
 
-    const formatPrice = (price: number) => {
+    const formatPrice = (priceCents: number) => {
         return new Intl.NumberFormat("en-CA", {
             style: "currency",
             currency: "CAD",
-        }).format(price);
+        }).format(priceCents / 100);
     };
 
     return (

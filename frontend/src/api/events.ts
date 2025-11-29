@@ -111,5 +111,25 @@ export const eventsApi = {
     }>(`/events/${eventId}/tickets/validate?code=${code}`);
     return response;
   },
+
+  /**
+   * Create a new event (organizer only)
+   */
+  createEvent: async (data: {
+    title: string;
+    description: string;
+    location: string;
+    startTime: string;
+    endTime: string;
+    categories?: string[];
+    ticketInfos?: Array<{
+      type: string;
+      price: number;
+      quantity: number;
+    }>;
+  }): Promise<Event> => {
+    const response = await apiClient.post<EventResponse>('/events', data);
+    return response.event;
+  },
 };
 

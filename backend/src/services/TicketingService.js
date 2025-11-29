@@ -230,7 +230,8 @@ static async validateTicket({ currentUser, eventId, code }) {
       
       throw new AppError(`Payment declined: ${reasonMessages[reason] || reason}`, 400, {
         code: 'PAYMENT_DECLINED',
-        reason
+        reason,
+        details: { reason }
       });
     }
 
