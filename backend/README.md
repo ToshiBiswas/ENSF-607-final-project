@@ -1,305 +1,431 @@
-# Event Planner API — Documentation (v0.1)
+# Event Planner Backend API
 
-This doc summarizes the REST endpoints implemented so far for the **Event Planner** backend (Knex.js + MVC/OOP). It reflects the migrations and services we built together: users, events, categories, ticket types, carts, payments, and webhook-based notifications.
+A robust REST API for the Event Planner (MindPlanner) marketplace built with Node.js, Express.js, and MySQL. Implements a layered MVC architecture with Repository pattern and Domain-Driven Design principles.
 
-> **Auth**: JWT Bearer. Send `Authorization: Bearer <token>` on all protected routes.
->
-> **Base URL**: `http://localhost:3000`
+## 🚀 Features
 
----
+- **User Authentication**: JWT-based authentication with refresh tokens
+- **Event Management**: Create, read, update, and delete events with ticket types
+- **Shopping Cart**: Server-side cart management with stock validation
+- **Payment Processing**: Integration with external payment processor (currently mocked)
+- **Ticketing System**: Unique ticket code generation and validation
+- **AI Integration**: Google Gemini API for event recommendations and outfit advice
+- **Notifications**: Webhook-based notification system
+- **User Management**: Profile management, payment methods, preferences
+- **Real-time Features**: Server-Sent Events (SSE) for real-time updates
 
-## Quick Start
+## 📋 Prerequisites
 
-1. **Migrate & Seed**
+- **Node.js**: v18 or higher
+- **MySQL**: 8.4 or higher
+- **npm**: v9 or higher
+
+## 🛠️ Tech Stack
+
+- **Node.js**: Runtime environment
+- **Express.js**: Web framework
+- **Knex.js**: SQL query builder and migrations
+- **MySQL 8.4**: Database
+- **JWT**: Authentication tokens
+- **bcrypt**: Password hashing
+- **Google Gemini API**: AI-powered recommendations
+- **Jest**: Testing framework
+- **Docker**: Containerization
+
+## 📦 Installation
+
+1. **Navigate to the backend directory**:
    ```bash
+   cd backend
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**:
+   Create a `.env` file in the backend directory:
+   ```env
+   # Server
+   PORT=3000
+   NODE_ENV=development
+
+   # Database
+   DB_HOST=localhost
+   DB_PORT=3306
+   DB_USER=your_username
+   DB_PASSWORD=your_password
+   DB_NAME=event_planner
+   # Or use DATABASE_URL=mysql://user:password@host:port/database
+
+   # JWT
+   JWT_SECRET=your_super_secret_jwt_key_change_in_production
+   JWT_REFRESH_SECRET=your_super_secret_refresh_key_change_in_production
+   JWT_EXPIRES_IN=15m
+   JWT_REFRESH_EXPIRES_IN=7d
+
+   # Payment Processor
+   PAYMENT_API_BASE_URL=http://localhost:4000
+
+   # Notifications
+   NOTIFY_WEBHOOK_URL=http://localhost:5000/webhooks
+   NOTIFY_WEBHOOK_SECRET=optional_hmac_secret
+
+   # AI (Google Gemini)
+   GEMINI_API_KEY=your_gemini_api_key
+
+   # Frontend
+   FRONTEND_URL=http://localhost:5173
+
+   # Scheduler
+   INTERVAL_MS=60000
+   ```
+
+4. **Set up the database**:
+   ```bash
+   # Run migrations
    npx knex migrate:latest
-   # choose one of the seeds (see earlier messages)
-   npx knex seed:run --specific=000_test_seed_vm.js
+
+   # (Optional) Run seeds
+   npx knex seed:run
    ```
-2. **Login** (seeded user):
-   ```bash
-   curl -X POST http://localhost:3000/api/auth/login \
-     -H "Content-Type: application/json" \
-     -d '{"email":"avery@user.test","password":"password123"}'
-   ```
-3. **Use token** for subsequent requests.
 
----
+## 🏃 Development
 
-## Auth
+### Start Development Server
 
-### POST /api/auth/register
-Register a new account.
-
-**Body**
-```json
-{ "name": "Avery", "email": "avery@example.com", "password": "password123" }
-```
-**201** → `{ token, user }`
-
-### POST /api/auth/login
-Login to get a JWT.
-
-**Body**
-```json
-{ "email": "avery@user.test", "password": "password123" }
-```
-**200** → `{ token, user }`
-
-### GET /api/auth/me
-Return the current user.
-
-**200** → `User`
-
----
-
-## Users
-
-### GET /api/me
-Fetch my profile.
-
-### PATCH /api/me
-Update profile fields (e.g., `name`).
-
-```json
-{ "name": "Avery A." }
+```bash
+npm run dev
 ```
 
-### GET /api/me/preferences
-Get my preferences (`location`, `categoryId`).
+The API will be available at `http://localhost:3000`.
 
-### PUT /api/me/preferences
-Set my preferences.
+### Start Production Server
 
-```json
-{ "location": "Calgary", "categoryId": 1 }
+```bash
+npm start
 ```
 
-### GET /api/me/payment-methods
-List saved cards (non-sensitive shape: `name`, `last4`, `expMonth`, `expYear`, `currency`, `primary`).
+### Run Tests
 
-### POST /api/me/payment-methods
-Save a verified card.
+```bash
+# Run all tests
+npm test
 
-```json
-{
-  "accountId": "acct_123",
-  "name": "Avery Attendee",
-  "last4": "4242",
-  "expMonth": 12,
-  "expYear": 2030,
-  "currency": "CAD",
-  "primary": true
-}
+# Run tests in watch mode
+npm run test:watch
+
+# Run unit tests only
+npm run test:unit
+
+# Run integration tests only
+npm run test:int
+
+# Run tests with coverage
+npm run test:coverage
 ```
 
-### DELETE /api/me/payment-methods/{paymentInfoId}
-Remove a saved card I own.
+### Database Migrations
 
----
+```bash
+# Run pending migrations
+npm run migrate
 
-## Categories
+# Rollback last migration
+npm run rollback
 
-### GET /api/categories
-List categories.
-
-### GET /api/categories/{name}/events
-Return events in a category by **category name** (e.g., `Tech`).
-
----
-
-## Events
-
-> **Organizer rules**
-> * Only the organizer can update/delete their event.
-> * **Cannot reduce** total ticket stock — only increase or add new ticket types.
-> * Deleting an event triggers **refunds** for purchasers and **webhook notifications**.
-
-### GET /api/events
-List events (optional filters: `q`, `category`, `active`).
-
-### POST /api/events
-Create an event. Example:
-```json
-{
-  "title": "Tech Meetup YYC",
-  "description": "Talks + demos",
-  "location": "Innovation Hub",
-  "startTime": "2025-10-23T01:00:00Z",
-  "endTime": "2025-10-23T04:00:00Z",
-  "categories": ["Tech"],
-  "ticketTypes": [
-    { "ticketType": "Early Bird", "ticketPrice": 10, "ticketsQuantity": 30 },
-    { "ticketType": "Regular",    "ticketPrice": 20, "ticketsQuantity": 70 }
-  ]
-}
-```
-**201** → `Event`
-
-### GET /api/events/{eventId}
-Get event details.
-
-### PATCH /api/events/{eventId}
-Update event fields or **increase** ticket stock. Attempting to lower `ticketsQuantity` is rejected.
-
-```json
-{
-  "title": "Tech Meetup YYC (Updated)",
-  "ticketTypes": [
-    { "ticketType": "Regular", "ticketsQuantity": 90 },
-    { "ticketType": "VIP",     "ticketPrice": 99, "ticketsQuantity": 10 }
-  ]
-}
+# Run seeds
+npm run seed
 ```
 
-### DELETE /api/events/{eventId}
-Delete my event → refunds all related payments and sends notifications via webhook.
+## 🐳 Docker Deployment
 
----
+### Using Docker Compose
 
-## Tickets
+```bash
+# Start services (API + Database)
+docker-compose up -d
 
-### GET /api/events/{eventId}/tickets
-List ticket types for an event (name, price, `ticketsLeft`).
+# View logs
+docker-compose logs -f
 
-### GET /api/me/tickets
-List my minted tickets (each has a unique **6‑digit** `code`).
-
----
-
-## Cart
-
-> Cart exists server-side per user-session. Adding requires the event to be ongoing and stock available.
-
-### GET /api/cart
-Return current cart.
-
-### POST /api/cart/items
-Add a ticket type to cart.
-```json
-{ "ticketInfoId": 42, "quantity": 2 }
+# Stop services
+docker-compose down
 ```
 
-### PATCH /api/cart/items/{ticketInfoId}
-Update quantity (use `0` to remove).
-```json
-{ "quantity": 3 }
+### Build Docker Image
+
+```bash
+docker build -t event-planner-api .
 ```
 
-### DELETE /api/cart/items/{ticketInfoId}
-Remove a ticket type from the cart.
+## 📁 Project Structure
 
-### POST /api/cart/checkout
-Checkout with either a **saved card** or a **new card**.
-
-**Saved card**
-```json
-{ "paymentInfoId": 10 }
+```
+backend/
+├── src/
+│   ├── app.js              # Express app setup
+│   ├── server.js           # Server entry point
+│   ├── config/             # Configuration files
+│   │   └── db.js           # Database configuration
+│   ├── controllers/        # HTTP request handlers
+│   │   ├── AuthController.js
+│   │   ├── EventsController.js
+│   │   ├── UsersController.js
+│   │   ├── CartController.js
+│   │   ├── PaymentsController.js
+│   │   ├── TicketsController.js
+│   │   ├── NotificationController.js
+│   │   └── CategoryController.js
+│   ├── services/           # Business logic layer
+│   │   ├── AuthService.js
+│   │   ├── EventService.js
+│   │   ├── CartService.js
+│   │   ├── TicketingService.js
+│   │   ├── PaymentService.js
+│   │   ├── NotificationService.js
+│   │   ├── gemini.service.cjs
+│   │   ├── recommend.service.cjs
+│   │   └── MockPaymentProcessor.js
+│   ├── repositories/       # Data access layer
+│   │   ├── UserRepo.js
+│   │   ├── EventRepo.js
+│   │   ├── CartRepo.js
+│   │   ├── TicketRepo.js
+│   │   ├── PaymentRepo.js
+│   │   └── ...
+│   ├── domain/             # Domain models
+│   │   ├── User.js
+│   │   ├── Event.js
+│   │   ├── Cart.js
+│   │   ├── Ticket.js
+│   │   └── ...
+│   ├── routes/             # Route definitions
+│   │   ├── index.js        # Main API routes
+│   │   ├── advice.routes.cjs
+│   │   └── payout.routes.cjs
+│   ├── middleware/         # Express middleware
+│   │   ├── auth.js
+│   │   └── requireAuth.js
+│   ├── utils/              # Utility functions
+│   │   ├── jwt.js
+│   │   ├── errors.js
+│   │   └── handler.js
+│   └── db/                 # Database connection
+│       └── knex.js
+├── migrations/             # Database migrations
+├── seeds/                  # Database seeds
+├── __tests__/              # Test files
+├── docker-compose.yml      # Docker Compose configuration
+├── Dockerfile              # Docker image definition
+├── knexfile.js             # Knex configuration
+└── package.json            # Dependencies and scripts
 ```
 
-**New card** (verified before charge via payment processor)
-```json
-{
-  "card": { "number":"4111111111111111", "name":"Avery", "ccv":"123", "expMonth":12, "expYear":2030 },
-  "saveCard": true
-}
-```
-**200** → `{ payment, tickets: [ ... minted ... ] }`
+## 🏗️ Architecture
 
----
+### Layered MVC Pattern
 
-## Payments
+The backend follows a layered architecture:
 
-### POST /api/payments/verify-card
-Verify a card with the external processor (no charge). Used for **new card** checkout or to pre-save a card.
-```json
-{ "number":"4111...", "name":"Avery", "ccv":"123", "expMonth":12, "expYear":2030 }
-```
-**200** → `{ valid: true, accountId: "acct_..." }`
+1. **Controllers**: Handle HTTP requests/responses, input validation
+2. **Services**: Implement business logic, orchestrate operations
+3. **Repositories**: Encapsulate database queries
+4. **Domain Models**: Rich domain objects with business logic
 
-### GET /api/payments/{paymentId}
-Fetch payment details.
+### Key Design Patterns
 
-### POST /api/payments/{paymentId}/refund
-Refund a payment (used by cancel flow; may also be exposed for admin/organizer tooling).
+- **Repository Pattern**: Abstracts data access
+- **Service Layer**: Encapsulates business logic
+- **Domain-Driven Design**: Rich domain models
+- **Dependency Injection**: Loose coupling between layers
 
----
+## 🔌 API Endpoints
 
-## Notifications
+See [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) for complete API documentation.
 
-### GET /api/me/notifications
-List my notifications.
+### Quick Reference
 
-### PATCH /api/me/notifications/{notificationId}/read
-Mark as read.
+- **Authentication**: `/api/auth/*`
+- **Users**: `/api/me/*`
+- **Events**: `/api/events/*`
+- **Cart**: `/api/cart/*`
+- **Payments**: `/api/payments/*`
+- **Tickets**: `/api/tickets/*`, `/api/me/tickets`
+- **Categories**: `/api/categories`
+- **AI Advice**: `/api/advice/*`, `/api/recommend-event`
+- **Notifications**: `/api/notifications/*`
+- **Payouts**: `/api/events/:eventId/request-payout`
 
-> **Dispatch**: Notifications are **sent as webhooks** to your configured endpoint(s) when events are canceled or payments succeed/fail/refund. Delivery attempts are POST requests with JSON payloads.
+## 🔐 Authentication
 
-**Example webhook payload** (event canceled):
-```json
-{
-  "type": "event_canceled",
-  "userId": 5,
-  "eventId": 101,
-  "message": "Event 'Tech Meetup YYC' was canceled. A refund has been issued.",
-  "sentAt": "2025-10-22T20:22:10.000Z"
-}
-```
+The API uses JWT (JSON Web Tokens) for authentication:
 
-**Configure**:
-- `NOTIFY_WEBHOOK_URL` — primary target URL
-- (optional) `NOTIFY_WEBHOOK_SECRET` — HMAC signature header (e.g., `X-Webhook-Signature`)
+1. **Register/Login**: Get access token and refresh token
+2. **Protected Routes**: Include `Authorization: Bearer <token>` header
+3. **Token Refresh**: Use refresh token to get new access token
+4. **Logout**: Invalidate refresh tokens
 
----
+### Example Request
 
-## Error Format
-All errors follow a consistent shape:
-```json
-{
-  "error": { "code": "string", "message": "human readable", "details": {"field": "why"} }
-}
+```bash
+curl -X GET http://localhost:3000/api/me \
+  -H "Authorization: Bearer <your_jwt_token>"
 ```
 
-**Common codes**: `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `PAYMENT_FAILED`, `OUT_OF_STOCK`, `EVENT_EXPIRED`.
+## 🗄️ Database
 
----
+### Migrations
 
-## Business Rules
-- **Ticketing**: cannot add to cart or buy if the event has ended or not yet started (configurable as ongoing window).
-- **Stock**: `ticketsLeft` must be ≥ requested quantity. On success, decremented atomically.
-- **Minting**: each purchased ticket gets a **unique 6‑digit** `code`.
-- **Event updates**: organizers may **increase** total stock but not reduce (service enforces monotonicity).
-- **Event deletion**: refunds all payments for that event, then sends notifications via webhook.
-- **Cards**: saving requires verification; saved records store **non-sensitive** fields only (`last4`, expiry, name, currency, provider `accountId`).
+Database schema is managed through Knex migrations:
 
----
+```bash
+# Create a new migration
+npx knex migrate:make migration_name
 
-## Security
-- JWT signed with `JWT_SECRET`.
-- Bearer token required for all non-public endpoints.
-- Webhook security: (optional) HMAC signature.
+# Run migrations
+npx knex migrate:latest
 
----
+# Rollback
+npx knex migrate:rollback
+```
 
-## OpenAPI (Machine‑Readable)
-A complete OpenAPI 3.1 spec is available here:
+### Seeds
 
-**event-planner-openapi.yaml** — download and import into Postman or Swagger UI.
+Seed files populate the database with test data:
 
----
+```bash
+# Run all seeds
+npx knex seed:run
 
-## Environment
-- `PORT` — HTTP port (default `3000`)
-- `DATABASE_URL` or `DB_*` — Knex connection settings
-- `JWT_SECRET` — JWT signing secret
-- `PAYMENT_API_BASE_URL` — external payment processor base URL
-- `NOTIFY_WEBHOOK_URL` — where to deliver notifications
-- `NOTIFY_WEBHOOK_SECRET` — (optional) HMAC secret for signatures
+# Run specific seed
+npx knex seed:run --specific=000_test_seed.js
+```
 
----
+## 🔔 Notifications
 
-## Notes
-- Our seed (`000_test_seed_vm.js`) supports TypeScript `accounts.ts` (default/named exports, comments, `as const`).
-- If your `users.role` enum doesn’t include `organizer`, either add it via migration or keep seed roles as `user`.
-- If migrations have mismatched historical names, use the provided shim set or reset your DB.
+Notifications are sent via webhooks to configured endpoints:
 
+- **Event Canceled**: Sent when an event is deleted
+- **Payment Success**: Sent when payment succeeds
+- **Payment Failed**: Sent when payment fails
+- **Refund Issued**: Sent when a refund is processed
+
+Configure webhook URL in `.env`:
+```env
+NOTIFY_WEBHOOK_URL=http://your-webhook-endpoint.com/webhooks
+```
+
+## 🤖 AI Integration
+
+### Google Gemini API
+
+The backend integrates with Google Gemini API for:
+
+- **Event Recommendations**: Personalized event suggestions
+- **Outfit Advice**: AI-powered outfit recommendations
+- **Event Planning Advice**: General event planning guidance
+
+Set `GEMINI_API_KEY` in your `.env` file.
+
+## 🧪 Testing
+
+### Test Structure
+
+- **Unit Tests**: Test individual functions/services
+- **Integration Tests**: Test API endpoints with database
+- **Test Setup**: `__tests__/setup/jest.setup.js`
+
+### Running Tests
+
+```bash
+# All tests
+npm test
+
+# Watch mode
+npm run test:watch
+
+# Coverage
+npm run test:coverage
+```
+
+## 🔒 Security
+
+- **Password Hashing**: bcrypt with salt rounds
+- **JWT Tokens**: Signed with secret keys
+- **CORS**: Configured for frontend origin
+- **Input Validation**: Zod schemas for request validation
+- **SQL Injection**: Prevented via Knex parameterized queries
+- **Webhook Security**: Optional HMAC signatures
+
+## 📊 Business Rules
+
+- **Event Stock**: Cannot reduce ticket stock, only increase
+- **Ticket Purchase**: Events must be active and have available stock
+- **Ticket Codes**: Unique 6-digit codes generated for each ticket
+- **Event Deletion**: Automatically refunds all payments and sends notifications
+- **Payment Methods**: Only non-sensitive data stored (last4, expiry, etc.)
+
+## 🐛 Troubleshooting
+
+### Database Connection Issues
+
+1. Verify MySQL is running
+2. Check database credentials in `.env`
+3. Ensure database exists
+4. Check network connectivity
+
+### JWT Token Issues
+
+1. Verify `JWT_SECRET` is set
+2. Check token expiration settings
+3. Ensure tokens are sent in `Authorization` header
+
+### Payment Processor Issues
+
+1. Verify `PAYMENT_API_BASE_URL` is correct
+2. Check payment processor is running (if using mock)
+3. Review payment logs
+
+## 📝 Environment Variables
+
+See the Installation section for required environment variables. All sensitive values should be kept secure and never committed to version control.
+
+## 🚀 Deployment
+
+### Production Checklist
+
+- [ ] Set `NODE_ENV=production`
+- [ ] Use strong `JWT_SECRET` and `JWT_REFRESH_SECRET`
+- [ ] Configure production database
+- [ ] Set up proper CORS origins
+- [ ] Configure webhook URLs
+- [ ] Set up monitoring and logging
+- [ ] Enable HTTPS
+- [ ] Configure rate limiting
+- [ ] Set up database backups
+
+### Docker Production
+
+```bash
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+## 📚 Additional Resources
+
+- [Express.js Documentation](https://expressjs.com)
+- [Knex.js Documentation](https://knexjs.org)
+- [JWT Documentation](https://jwt.io)
+- [MySQL Documentation](https://dev.mysql.com/doc)
+
+## 🤝 Contributing
+
+1. Follow the existing code structure
+2. Write tests for new features
+3. Update documentation
+4. Follow the coding standards
+
+## 📄 License
+
+See the project root LICENSE file for details.
