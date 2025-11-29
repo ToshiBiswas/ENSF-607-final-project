@@ -4,7 +4,6 @@
 exports.up = async function up(knex) {
   await knex.schema.createTable('refresh_tokens', (t) => {
     t.increments('id').primary();
-
     // User who owns this refresh token
     t
       .integer('user_id')
