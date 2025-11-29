@@ -52,15 +52,15 @@ export function EventPage({ eventId }: { eventId: number }) {
     });
   };
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (priceCents: number) => {
     return new Intl.NumberFormat("en-CA", {
       style: "currency",
       currency: "CAD",
-    }).format(price);
+    }).format(priceCents / 100);
   };
 
   const handleSelectTicket = async (ticketInfoId: number) => {
-    if (addingToCart === ticketInfoId) return; // Prevent double-clicks
+    if (addingToCart === ticketInfoId) return; //prevent double-clicks
     
     setAddingToCart(ticketInfoId);
     try {

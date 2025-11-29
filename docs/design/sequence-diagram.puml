@@ -1,0 +1,100 @@
+@startuml Sequence Diagram - Ticket Purchase Flow
+
+actor User
+participant Frontend
+participant CartController
+participant TicketingService
+participant CartService
+participant CartRepo
+participant EventRepo
+participant TicketInfoRepo
+participant MockPaymentProcessor
+participant PaymentRepo
+participant TicketMintRepo
+participant NotificationService
+database MySQL
+
+User -> Frontend: Add tickets to cart
+Frontend -> CartController: POST /api/cart/items
+CartController -> CartService: addItem(userId, ticketInfoId, quantity)
+CartService -> CartRepo: addItem(cartId, ticketInfoId, quantity)
+CartRepo -> MySQL: INSERT cart_items
+MySQL --> CartRepo: success
+CartRepo --> CartService: CartItem
+CartService --> CartController: Cart
+CartController --> Frontend: 200 OK {cart}
+Frontend --> User: Cart updated
+
+User -> Frontend: Proceed to checkout
+Frontend -> CartController: POST /api/cart/checkout\n{usePaymentInfoId or newCard}
+CartController -> TicketingService: checkout(userId, paymentInfo)
+
+activate TicketingService
+TicketingService -> CartService: getCart(userId)
+CartService -> CartRepo: findByUserId(userId)
+CartRepo -> MySQL: SELECT cart + items
+MySQL --> CartRepo: cart data
+CartRepo --> CartService: Cart
+CartService --> TicketingService: Cart
+
+TicketingService -> EventRepo: findById(eventId) for each item
+EventRepo -> MySQL: SELECT events
+MySQL --> EventRepo: event data
+EventRepo --> TicketingService: Event
+
+TicketingService -> TicketInfoRepo: checkStock(infoId, quantity)
+TicketInfoRepo -> MySQL: SELECT tickets_left
+MySQL --> TicketInfoRepo: stock
+TicketInfoRepo --> TicketingService: stock available
+
+TicketingService -> MySQL: BEGIN TRANSACTION
+
+TicketingService -> MockPaymentProcessor: purchase(accountId, ccv, amountCents)
+activate MockPaymentProcessor
+MockPaymentProcessor -> MySQL: SELECT payment_accounts
+MySQL --> MockPaymentProcessor: account data
+MockPaymentProcessor --> TicketingService: {status: 'approved', payment_id}
+deactivate MockPaymentProcessor
+
+TicketingService -> PaymentRepo: insertPayment(userId, paymentInfoId, amountCents)
+PaymentRepo -> MySQL: INSERT payments
+MySQL --> PaymentRepo: paymentId
+PaymentRepo --> TicketingService: Payment
+
+loop For each cart item
+  TicketingService -> TicketInfoRepo: decrementStock(infoId, quantity)
+  TicketInfoRepo -> MySQL: UPDATE tickets_left
+  MySQL --> TicketInfoRepo: success
+  
+  loop For each quantity
+    TicketingService -> TicketMintRepo: save(code, userId, eventId, infoId, paymentId)
+    TicketMintRepo -> MySQL: INSERT tickets
+    MySQL --> TicketMintRepo: ticketId
+    TicketMintRepo --> TicketingService: Ticket
+    
+    TicketingService -> PaymentRepo: insertPurchase(paymentId, ticketId, amountCents)
+    PaymentRepo -> MySQL: INSERT purchases
+    MySQL --> PaymentRepo: success
+  end
+end
+
+TicketingService -> CartService: clearCart(userId)
+CartService -> CartRepo: clearCart(cartId)
+CartRepo -> MySQL: DELETE cart_items, DELETE cart
+MySQL --> CartRepo: success
+CartRepo --> CartService: success
+
+TicketingService -> NotificationService: queue(userId, eventId, title, message)
+NotificationService -> MySQL: INSERT notifications
+MySQL --> NotificationService: notificationId
+
+TicketingService -> MySQL: COMMIT TRANSACTION
+deactivate TicketingService
+
+TicketingService --> CartController: {payment, tickets}
+CartController --> Frontend: 200 OK {payment, tickets}
+Frontend --> User: Purchase successful, tickets issued
+
+@enduml
+
+

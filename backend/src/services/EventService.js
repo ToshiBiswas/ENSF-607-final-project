@@ -27,23 +27,21 @@ function normalizeCategoryValues(values) {
   return [...uniq];
 }
 
-/** Strictly resolve category IDs; throw if any are missing */
+/** Resolve category IDs; create missing categories automatically */
 async function resolveCategoryIdsStrict(categoryValues) {
   const wanted = normalizeCategoryValues(categoryValues);
   if (wanted.length === 0) return [];
 
-  const rows = await EventRepo.getCategoriesByValues(wanted); // [{category_id, category_value}]
-  const byVal = new Map(rows.map(r => [r.category_value, r.category_id]));
-
-  const missing = wanted.filter(v => !byVal.has(v));
-  if (missing.length) {
-    throw new AppError(
-      `Category not found: ${missing.join(', ')}`,
-      400,
-      { code: 'CATEGORY_NOT_FOUND', missing }
-    );
+  const { CategoryRepo } = require('../repositories/CategoryRepo');
+  const categoryIds = [];
+  
+  //find or create each category so new ones get added automatically
+  for (const value of wanted) {
+    const category = await CategoryRepo.findOrCreate(value);
+    categoryIds.push(category.categoryId);
   }
-  return wanted.map(v => byVal.get(v)); // preserve incoming order
+  
+  return categoryIds; //preserve incoming order
 }
 
 class EventService {
@@ -76,19 +74,17 @@ class EventService {
   ) {
     const normTitle = normalizeTitle(title);
 
-    // Basic required fields present?
+    //check required fields are present
     if (!normTitle || !location || !startTime || !endTime) {
       throw new AppError('Missing required fields', 400, {
         code: 'BAD_EVENT_FIELDS',
       });
     }
 
-    // ------------------------------
-    // Time window validation
-    // ------------------------------
+    //validate time window
     const now = new Date();
 
-    // Allow either Date objects or ISO strings
+    //handle both Date objects and ISO strings
     const start = startTime instanceof Date ? startTime : new Date(startTime);
     const end   = endTime   instanceof Date ? endTime   : new Date(endTime);
 
@@ -106,40 +102,33 @@ class EventService {
       });
     }
 
-    const maxEnd = new Date(start.getTime() + 60 * 60 * 1000); // start + 1 hour
-
-    // must end after it starts, and strictly before start + 1 hour
-    if (end <= start || end >= maxEnd) {
+    //end must be after start or validation fails
+    if (end <= start) {
       throw new AppError(
-        'Event duration must be greater than 0 and less than 1 hour',
+        'Event end time must be after start time',
         400,
         {
           code: 'BAD_EVENT_DURATION',
           startTime: start.toISOString(),
           endTime: end.toISOString(),
-          maxEndTime: maxEnd.toISOString(),
         }
       );
     }
 
-    // Use the normalized Date objects from here on so DB gets consistent values
+    //use normalized dates so db gets consistent values
     startTime = start;
     endTime = end;
 
-    // ------------------------------
-    // Unique (CI) title
-    // ------------------------------
+    //check title is unique (case-insensitive)
     if (await EventRepo.existsTitleCI(normTitle)) {
       throw new AppError('An event with this title already exists', 409, {
         code: 'DUPLICATE_TITLE',
       });
     }
 
-    // ------------------------------
-    // Resolve / require payment method
-    // ------------------------------
+    //payment method is optional for event creation
     const { existingCard, newCard } = payment || {};
-    let resolvedPaymentInfoId;
+    let resolvedPaymentInfoId = null;
 
     if (existingCard != null) {
       const pid = Number(existingCard);
@@ -163,15 +152,10 @@ class EventService {
       const { PaymentService } = require('./PaymentService');
       const stored = await PaymentService.verifyAndStore(organizerId, newCard);
       resolvedPaymentInfoId = stored.paymentInfoId;
-    } else {
-      throw new AppError('payment method is required', 400, {
-        code: 'PAYMENT_INFO_REQUIRED',
-      });
     }
+    //payment method is optional, resolvedPaymentInfoId can be null
 
-    // ------------------------------
-    // Categories & tickets
-    // ------------------------------
+    //resolve categories and create tickets
     const categoryIds = await resolveCategoryIdsStrict(categories);
 
     const evt = await EventRepo.insert({
@@ -188,7 +172,7 @@ class EventService {
       await EventRepo.attachCategories(evt.eventId, categoryIds);
     }
 
-    // Create notification for organizer when event is created
+    //notify organizer that their event was created
     await NotificationService.queue({
       userId: organizerId,
       eventId: evt.eventId,
@@ -463,7 +447,7 @@ class EventService {
             userId: organizerId,
             eventId: eventId,
             title: 'event_payout',
-            message: `Your event "${title}" was settled. You earned $${(payoutCents / 100).toFixed(2)} from ticket sales.`,
+            message: `Your event "${title}" was settled. You earned $${(-payoutCents / 100).toFixed(2)} from ticket sales.`,
             sendAt: new Date()
           });
         } catch (e) {

@@ -1,0 +1,204 @@
+@startuml Class Diagram - Event Planner System
+
+' Domain Models
+class User {
+  +userId: number
+  +name: string
+  +email: string
+  +role: string
+}
+
+class Event {
+  +eventId: number
+  +title: string
+  +description: string
+  +location: string
+  +startTime: Date
+  +endTime: Date
+  +isActive(): boolean
+  +purchasable(): boolean
+}
+
+class Cart {
+  +cartId: number
+  +userId: number
+  +items: CartItem[]
+}
+
+class Ticket {
+  +ticketId: number
+  +code: string
+  +eventId: number
+  +ownerId: number
+}
+
+class Payment {
+  +paymentId: number
+  +userId: number
+  +amountCents: number
+  +currency: string
+}
+
+class PaymentInfo {
+  +paymentInfoId: number
+  +accountId: string
+  +name: string
+  +last4: string
+}
+
+class Category {
+  +categoryId: number
+  +value: string
+}
+
+' Services
+class AuthService {
+  +register(): {user, token}
+  +login(): {user, token}
+}
+
+class EventService {
+  +createEvent(): Event
+  +listByCategory(): Event[]
+  +listMine(): Event[]
+  +settleAndDeleteExpiredEvents(): {count}
+}
+
+class TicketingService {
+  +checkout(): {payment, tickets}
+  +validateTicket(): {response, ticket}
+}
+
+class CartService {
+  +addItem(): Cart
+  +viewCart(): Cart
+  +clearCart(): Cart
+}
+
+class PaymentService {
+  +processPayment(): Payment
+  +refund(): Refund
+}
+
+class MockPaymentProcessor {
+  +verifyCard(): {verified, account}
+  +purchase(): {status, payment_id}
+  +refund(): {refunded, refund_id}
+}
+
+class NotificationService {
+  +queue(): Notification
+  +listForUser(): Notification[]
+}
+
+' Repositories
+class UserRepo {
+  +findById(): User
+  +findByEmail(): User
+  +insert(): User
+  +updateProfile(): User
+}
+
+class EventRepo {
+  +findById(): Event
+  +listByCategory(): Event[]
+  +listByOrganizer(): Event[]
+  +insert(): Event
+  +delete(): void
+}
+
+class CartRepo {
+  +findByUserId(): Cart
+  +createCart(): Cart
+  +addItem(): CartItem
+  +clearCart(): void
+}
+
+class PaymentRepo {
+  +findByUserId(): Payment[]
+  +insertPayment(): Payment
+  +insertPurchase(): Purchase
+}
+
+class TicketMintRepo {
+  +save(): Ticket
+  +isCodeTaken(): boolean
+}
+
+' Controllers
+class AuthController {
+  +register()
+  +login()
+  +refresh()
+  +logout()
+}
+
+class EventsController {
+  +create()
+  +get()
+  +listByCategory()
+  +listMine()
+  +update()
+  +remove()
+}
+
+class CartController {
+  +add()
+  +view()
+  +checkout()
+  +clear()
+}
+
+class TicketsController {
+  +getMyTickets()
+  +validateForEvent()
+}
+
+class PaymentsController {
+  +verifyCard()
+  +listMyPayments()
+  +refund()
+}
+
+' Relationships - Domain Models
+User "1" --> "*" Event : organizes
+Event "*" --> "*" Category : has
+Event "1" --> "*" Ticket : contains
+User "1" --> "*" Ticket : owns
+User "1" --> "1" Cart : has
+Cart "1" --> "*" CartItem : contains
+User "1" --> "*" Payment : makes
+Payment "1" --> "*" Purchase : contains
+User "*" --> "*" PaymentInfo : has
+
+' Relationships - Services use Repositories
+AuthService --> UserRepo : uses
+EventService --> EventRepo : uses
+EventService --> UserRepo : uses
+TicketingService --> CartRepo : uses
+TicketingService --> TicketMintRepo : uses
+TicketingService --> PaymentRepo : uses
+TicketingService --> MockPaymentProcessor : uses
+CartService --> CartRepo : uses
+PaymentService --> PaymentRepo : uses
+NotificationService --> NotificationRepo : uses
+
+' Relationships - Controllers use Services
+AuthController --> AuthService : uses
+EventsController --> EventService : uses
+CartController --> TicketingService : uses
+CartController --> CartService : uses
+TicketsController --> TicketingService : uses
+PaymentsController --> PaymentService : uses
+PaymentsController --> MockPaymentProcessor : uses
+
+' Relationships - Repositories return Domain Models
+UserRepo ..> User : returns
+EventRepo ..> Event : returns
+CartRepo ..> Cart : returns
+PaymentRepo ..> Payment : returns
+TicketMintRepo ..> Ticket : returns
+
+@enduml
+
+

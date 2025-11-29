@@ -48,11 +48,11 @@ const Homepage: React.FC = () => {
     });
   };
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (priceCents: number) => {
     return new Intl.NumberFormat("en-CA", {
       style: "currency",
       currency: "CAD",
-    }).format(price);
+    }).format(priceCents / 100);
   };
 
   return (
