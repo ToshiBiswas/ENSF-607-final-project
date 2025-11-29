@@ -129,7 +129,15 @@ class EventsController {
     const eventId = Number(req.params.id);
     const event = await EventRepo.findById(Number(req.params.id));
     if (!event) return res.status(404).json({ error: 'Not found' });
-    res.json({ ticketTypes: event.tickets });
+    // Normalize keys to expose ticketInfoId (expected by tests/clients)
+    const ticketTypes = (event.tickets || []).map((t) => ({
+      ticketInfoId: t.infoId,
+      ticketType: t.type,
+      ticketPrice: t.price,
+      ticketsQuantity: t.quantity,
+      ticketsLeft: t.left,
+    }));
+    res.json({ ticketTypes });
   });
 }
 

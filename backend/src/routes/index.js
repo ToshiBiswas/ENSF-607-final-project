@@ -31,6 +31,7 @@ r.get('/events/:id/tickets', EventsController.ticketTypes);
 r.get('/user/events', requireAuth, EventsController.listMine);
 /* ---------- CATEGORIES---------- */
 r.get('/categories',CategoryController.categories)
+r.get('/categories/:name/events',CategoryController.eventsByCategory)
 
 /* ---------- USER ---------- */
 r.get('/me', requireAuth, UsersController.me);

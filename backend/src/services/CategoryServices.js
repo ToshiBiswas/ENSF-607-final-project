@@ -22,6 +22,15 @@ class CategoryService {
   static async existsByValue(value) {
     return CategoryRepo.existsByValue(value);
   }
+
+  /**
+   * Return events that belong to a given category value.
+   * Case-insensitive match delegated to the repo/service layer.
+   */
+  static async getEventsByCategoryValue(value) {
+    const { EventService } = require('./EventService');
+    return EventService.listByCategory(value);
+  }
 }
 
 module.exports = { CategoryService };
