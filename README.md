@@ -75,7 +75,7 @@ ENSF-607-final-project/
    npm install
    npm install -D vite @vitejs/plugin-react
    npm install -D tailwindcss @tailwindcss/postcss postcss
-   
+
    ```
 3. Create `.env` file:
    ```env
@@ -185,7 +185,6 @@ ENSF-607-final-project/
 - ✅ View purchased tickets with unique codes
 - ✅ Manage profile and payment methods
 - ✅ View transaction history
-- ✅ AI-powered event recommendations
 - ✅ AI-powered outfit advice
 
 ### Organizer Features
@@ -208,11 +207,7 @@ ENSF-607-final-project/
 
 ```bash
 cd backend
-
-# Run all tests
-npm test
-
-# Run tests in watch mode
+# Run all unit tests
 npm run test:unit
 
 # Run all integration tests
