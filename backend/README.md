@@ -309,8 +309,6 @@ npx knex seed:run --specific=000_test_seed.js
 ### Google Gemini API
 
 The backend integrates with Google Gemini API for:
-
-- **Event Recommendations**: Personalized event suggestions
 - **Outfit Advice**: AI-powered outfit recommendations
 - **Event Planning Advice**: General event planning guidance
 
@@ -369,35 +367,9 @@ npm run test:coverage
 2. Check token expiration settings
 3. Ensure tokens are sent in `Authorization` header
 
-### Payment Processor Issues
-
-1. Verify `PAYMENT_API_BASE_URL` is correct
-2. Check payment processor is running (if using mock)
-3. Review payment logs
-
 ## 📝 Environment Variables
 
 See the Installation section for required environment variables. All sensitive values should be kept secure and never committed to version control.
-
-## 🚀 Deployment
-
-### Production Checklist
-
-- [ ] Set `NODE_ENV=production`
-- [ ] Use strong `JWT_SECRET` and `JWT_REFRESH_SECRET`
-- [ ] Configure production database
-- [ ] Set up proper CORS origins
-- [ ] Configure webhook URLs
-- [ ] Set up monitoring and logging
-- [ ] Enable HTTPS
-- [ ] Configure rate limiting
-- [ ] Set up database backups
-
-### Docker Production
-
-```bash
-docker-compose -f docker-compose.prod.yml up -d
-```
 
 ## 📚 Additional Resources
 
