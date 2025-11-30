@@ -73,11 +73,17 @@ ENSF-607-final-project/
 2. Install dependencies:
    ```bash
    npm install
+   npm install -D vite @vitejs/plugin-react
+   npm install -D tailwindcss @tailwindcss/postcss postcss
+   
    ```
-
 3. Create `.env` file:
    ```env
    VITE_API_BASE_URL=http://localhost:3000
+   ```
+4. Start development server:
+   ```bash
+   npm run dev
    ```
 
 4. Start development server:
@@ -110,7 +116,6 @@ ENSF-607-final-project/
    JWT_SECRET=your_jwt_secret
    JWT_REFRESH_SECRET=your_refresh_secret
    GEMINI_API_KEY=your_gemini_api_key
-   PAYMENT_API_BASE_URL=http://localhost:4000
    FRONTEND_URL=http://localhost:5173
    ```
 
@@ -170,20 +175,6 @@ ENSF-607-final-project/
 - **ESLint**: Code linting
 - **Docker**: Containerization
 
-## 📚 Documentation
-
-### Frontend Documentation
-- **[Frontend README](./frontend/README.md)**: Complete frontend setup, structure, and usage guide
-
-### Backend Documentation
-- **[Backend README](./backend/README.md)**: Backend setup, architecture, and development guide
-- **[API Documentation](./backend/API_DOCUMENTATION.md)**: Complete API reference with all endpoints
-
-### Project Documentation
-- **[Requirements Document](./docs/requirements/requirements.md)**: Functional and non-functional requirements
-- **[Design Document](./docs/design/design.md)**: Architecture and design patterns
-- **[UML Diagrams](./docs/design/)**: Class and sequence diagrams
-
 ## 🔑 Key Features
 
 ### User Features
@@ -222,10 +213,10 @@ cd backend
 npm test
 
 # Run tests in watch mode
-npm run test:watch
+npm run test:unit
 
-# Run with coverage
-npm run test:coverage
+# Run all integration tests
+npm run test:int
 ```
 
 ### Frontend Tests
@@ -238,15 +229,7 @@ Frontend testing is not currently set up. Consider adding Vitest and React Testi
 
 ```bash
 cd backend
-docker-compose up -d
-```
-
-### Production
-
-Create a `docker-compose.prod.yml` file with production configurations and:
-
-```bash
-docker-compose -f docker-compose.prod.yml up -d
+docker-compose up -d --build
 ```
 
 ## 🔒 Security
@@ -300,84 +283,3 @@ See `backend/migrations/` for the complete schema.
 - `POST /api/advice` - General event planning advice
 - `POST /api/advice/style` - Outfit advice
 - `POST /api/recommend-event` - Event recommendations
-
-See [API Documentation](./backend/API_DOCUMENTATION.md) for complete endpoint reference.
-
-## 🚧 Development Roadmap
-
-### Completed
-- ✅ User authentication and authorization
-- ✅ Event CRUD operations
-- ✅ Shopping cart and checkout
-- ✅ Payment processing
-- ✅ Ticket generation and validation
-- ✅ AI recommendations and advice
-- ✅ Notification system
-
-### Future Enhancements
-- [ ] Email notifications
-- [ ] Real-time chat support
-- [ ] Advanced analytics for organizers
-- [ ] Mobile app
-- [ ] Social media integration
-- [ ] Event reviews and ratings
-- [ ] Multi-currency support
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📝 Code Style
-
-- **Backend**: CommonJS modules, ES6+ syntax
-- **Frontend**: TypeScript with strict mode
-- **Linting**: ESLint configured for both frontend and backend
-- **Formatting**: Consider adding Prettier for consistent formatting
-
-## 🐛 Troubleshooting
-
-### Database Connection Issues
-- Verify MySQL is running
-- Check database credentials in `.env`
-- Ensure database exists
-- Check network connectivity
-
-### Frontend Not Connecting to Backend
-- Verify backend is running on port 3000
-- Check `VITE_API_BASE_URL` in frontend `.env`
-- Verify CORS settings in backend
-
-### JWT Token Issues
-- Verify `JWT_SECRET` is set in backend `.env`
-- Check token expiration settings
-- Ensure tokens are sent in `Authorization` header
-
-## 📄 License
-
-See LICENSE file for details.
-
-## 👥 Authors
-
-- Development Team
-
-## 🙏 Acknowledgments
-
-- Google Gemini API for AI capabilities
-- Express.js and React communities
-- All contributors and testers
-
-## 📞 Support
-
-For issues, questions, or contributions, please:
-1. Check the documentation in `docs/`
-2. Review existing issues
-3. Create a new issue with detailed information
-
----
-
-**Built with ❤️ for ENSF 607**
-

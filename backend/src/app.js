@@ -84,8 +84,6 @@ function startExpiredEventCleanupScheduler() {
   console.log('started Expired Events')
   setInterval(async () => {
     try {
-      // Call your real cleanup method here:
-      // adjust the method name to whatever you actually implemented.
       const result = await EventService.settleAndDeleteExpiredEvents();
 
       if (result.count > 0) {

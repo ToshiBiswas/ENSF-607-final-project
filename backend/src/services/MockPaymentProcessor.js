@@ -27,9 +27,7 @@ class MockPaymentProcessor {
   
     // If the card doesn't exist yet, create a mock account with a default balance.
     if (!acc) {
-      acc = await PaymentAccountRepo.createFromCard(card, {
-        initialBalanceCents: 1_000_000, // $10,000.00
-      });
+      return { verified: false }
     }
   
     return { verified: true, account: PaymentAccountRepo.toPublic(acc) };
