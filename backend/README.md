@@ -303,19 +303,6 @@ npx knex seed:run
 npx knex seed:run --specific=000_test_seed.js
 ```
 
-## 🔔 Notifications
-
-Notifications are sent via webhooks to configured endpoints:
-
-- **Event Canceled**: Sent when an event is deleted
-- **Payment Success**: Sent when payment succeeds
-- **Payment Failed**: Sent when payment fails
-- **Refund Issued**: Sent when a refund is processed
-
-Configure webhook URL in `.env`:
-```env
-NOTIFY_WEBHOOK_URL=http://your-webhook-endpoint.com/webhooks
-```
 
 ## 🤖 AI Integration
 
